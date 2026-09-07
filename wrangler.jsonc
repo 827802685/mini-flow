@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "mini-flow",
+  "name": "de9cc5da9705c7edf34e7e4e0ac9e360",
   "main": "src/index.ts",
   "compatibility_date": "2026-04-12",
   "compatibility_flags": ["nodejs_compat"],
@@ -9,14 +9,14 @@
     {
       "binding": "DB",
       "database_name": "mini-flow-db",
-      "database_id": "<你的 D1 database_id>"
+      "database_id": "268512b4-7419-42ff-b0b5-dbb2f8db2880"
     }
   ],
 
   "kv_namespaces": [
     {
       "binding": "CREDENTIALS",
-      "id": "<你的 KV namespace_id>"
+      "id": "133f1b8aec3049e0a337f753ccd7ff63"
     }
   ],
 
