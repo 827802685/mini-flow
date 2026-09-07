@@ -7,6 +7,7 @@ import { settingsRoutes, userRoutes } from './settings';
 import { nodeTypeRoutes } from './node-types';
 import { workflowRoutes } from './workflows';
 import { executionRoutes } from './executions';
+import { dlqRoutes } from './dead-letter';
 
 export const restApi = new Hono<{ Bindings: Env }>()
   .route('/settings', settingsRoutes)
@@ -14,7 +15,8 @@ export const restApi = new Hono<{ Bindings: Env }>()
   .route('/users', userRoutes)
   .route('/node-types', nodeTypeRoutes)
   .route('/workflows', workflowRoutes)
-  .route('/executions', executionRoutes);
+  .route('/executions', executionRoutes)
+  .route('/dead-letter', dlqRoutes);
 
 // n8n 返回统一包裹 { data, ... }，错误用 HTTP 状态 + { code, message }
 export function wrap(data: unknown) {

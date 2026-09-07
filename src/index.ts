@@ -6,7 +6,7 @@ import type { Env } from './types';
 import { restApi } from './n8n/router';
 import { sendPush } from './n8n/push';
 import { cleanupStaleLocks } from './engine/lock';
-import { listPending, purgeDeadLetter } from './engine/dead-letter';
+import { listPending, purgeDeadLetter, rebuildFromDlq } from './engine/dead-letter';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -21,47 +21,36 @@ app.get('/push', async (c) => {
   return stub.fetch(new Request('https://do/push', { headers: c.req.raw.headers }));
 });
 
-// --- 静态资源托管 + SPA fallback（n8n editor-ui dist） ---
+// --- 静态资源托管 + SPA fallback（n8n editor-ui dist，经 Workers Static Assets） ---
 app.get('*', async (c) => {
   const url = new URL(c.req.url);
-  const path = url.pathname;
-  // 跳过 API
-  if (path.startsWith('/rest') || path === '/push') return c.notFound();
-
-  const reqUrl = path.startsWith('/assets') ? path : '/index.html';
-  const asset = await fetchAsset(reqUrl);
-  if (asset) return new Response(asset.body, {
-    status: 200,
-    headers: { 'Content-Type': contentTypeFor(reqUrl), 'Cache-Control': reqUrl.startsWith('/assets') ? 'public, max-age=31536000, immutable' : 'no-cache' },
-  });
-  // 未托管的走 SPA fallback（返回 index.html 让前端路由接管）
-  const idx = await fetchAsset('/index.html');
+  const path = url.pathname.replace(/^\/+/, '');
+  // 跳过 API 与 Push
+  if (path === '' || !c.env.ASSETS) {
+    // 有 Assets 时交给它处理；无则返回接入提示
+    if (c.env.ASSETS) return c.env.ASSETS.fetch(c.req.raw);
+    return c.text('mini-flow worker: 未配置 ASSETS（把 n8n editor-ui dist 放入 frontend/dist 并开启 assets）');
+  }
+  const asset = await c.env.ASSETS.fetch(new Request(new URL(c.req.url).origin + '/' + path, c.req.raw));
+  // 命中真实资源 → 直接返回；否则 SPA fallback 到 index.html
+  if (asset && !asset.status.toString().startsWith('4')) return asset;
+  const idx = await c.env.ASSETS.fetch(new Request(new URL(c.req.url).origin + '/index.html'));
   if (idx) return new Response(idx.body, { status: 200, headers: { 'Content-Type': 'text/html' } });
-  return new Response('mini-flow worker: put editor-ui dist in public/assets', { status: 200, headers: { 'Content-Type': 'text/html' } });
+  return c.text('mini-flow worker: 未找到 index.html');
 });
 
-// 静态资源抽象：骨架阶段返回占位；接入时把 n8n editor-ui dist 放入 public/ 并实现读取。
-async function fetchAsset(_path: string): Promise<Response | null> {
-  // TODO: 接入 n8n editor-ui 构建产物后，改为从 public/assets 读取真实文件。
-  return null;
-}
-
-function contentTypeFor(path: string): string {
-  if (path.endsWith('.js')) return 'application/javascript';
-  if (path.endsWith('.css')) return 'text/css';
-  if (path.endsWith('.html')) return 'text/html';
-  if (path.endsWith('.svg')) return 'image/svg+xml';
-  if (path.endsWith('.png')) return 'image/png';
-  return 'text/plain';
-}
-
-// --- Cron: 每 15 分钟 - 清理过期锁 + 扫描 DLQ + 清理死信 ---
+// --- Cron: 每 15 分钟 - 清理过期锁 + DLQ 自动补偿扫描 + 清理死信 ---
 const CLEANUP_CRON = async (env: Env) => {
   await cleanupStaleLocks(env).catch(() => 0);
+  // 扫描到期的 pending 死信，逐条重建执行并重投 FlowEngine
   const pending = await listPending(env, 20).catch(() => []);
   for (const dlq of pending) {
-    // TODO: 从 DLQ 重建执行并 retry（需工作流数据路径），骨架先占位。
-    await sendPush(env, { type: 'executionWaiting', executionId: dlq.execution_id });
+    const r = await rebuildFromDlq(env, dlq).catch(() => ({ ok: false, newExecutionId: undefined, error: 'rebuild failed' }));
+    if (r.ok && r.newExecutionId) {
+      await sendPush(env, { type: 'executionStarted', executionId: r.newExecutionId });
+    } else {
+      await sendPush(env, { type: 'executionWaiting', executionId: dlq.execution_id });
+    }
   }
   await purgeDeadLetter(env).catch(() => 0);
 };
@@ -75,3 +64,7 @@ export default {
     }
   },
 };
+
+// 必须从入口导出 Durable Object 与 Workflows 类，否则 wrangler 无法绑定。
+export { PushConnection } from './runtime/push';
+export { FlowEngine } from './runtime/flow-engine';

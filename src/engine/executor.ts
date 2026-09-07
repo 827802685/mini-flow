@@ -66,7 +66,8 @@ export async function startExecution(
     params: {
       workflowId,
       workflowName: workflow.name,
-      nodes: workflow.nodes, // 节点定义数组（flow-engine 按序执行）
+      nodes: workflow.nodes, // 节点定义数组（flow-engine 编译 DAG 用）
+      connections: workflow.connections,
       executionId,
       mode,
       input: input === undefined ? {} : input,

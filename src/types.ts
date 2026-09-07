@@ -80,6 +80,7 @@ export interface Env {
   CREDENTIALS: KVNamespace;
   FLOW_ENGINE: Workflow;
   PUSH: DurableObjectNamespace;
+  ASSETS?: Fetcher; // Workers Static Assets（托管 n8n editor-ui dist）
 }
 
 // Durable Object SSE 门面接口（供客户端调用）

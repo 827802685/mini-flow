@@ -1,7 +1,7 @@
 // dead-letter: 死信队列 —— 重试耗尽后的兜底存储与自动重试
 import type { Env } from '../types';
 import { withRetry } from './retry';
-import type { DqlRow } from '../db/schema';
+import { parseWorkflowRow, type DqlRow, type WorkflowRow } from '../db/schema';
 
 export interface DlqEntry {
   executionId: string;
@@ -85,4 +85,55 @@ export function purgeDeadLetter(env: Env, olderThanHours = 72): Promise<number> 
     "DELETE FROM dead_letter_queue WHERE status IN ('resolved','failed') AND updated_at < ?",
   ).bind(cutoff).run();
   return res.then((r) => r.meta.changes);
+}
+
+// 从一条 DLQ 记录重建一次执行并重投给 FlowEngine。
+// 用于 cron 自动补偿扫描 / 手动 retry。策略：从该工作流入口重跑（Phase 1 骨架），
+// 携带 DLQ 记录的历史输入；真正的“从失败节点断点续跑”在 checkpoint 机制内已完成，
+// DLQ 作为重试耗尽的保险兜底，重跑全流程是保守做法。
+export async function rebuildFromDlq(
+  env: Env,
+  row: DqlRow,
+): Promise<{ ok: boolean; newExecutionId?: string; error?: string }> {
+  const wfRow = await withRetry(async () =>
+    env.DB.prepare('SELECT * FROM workflows WHERE id=?').bind(row.workflow_id).first<WorkflowRow>(),
+  );
+  if (!wfRow) {
+    await failDeadLetter(env, row.id).catch(() => {});
+    return { ok: false, error: `workflow ${row.workflow_id} 不存在` };
+  }
+  // 重试次数已达上限 → 置 failed，转人工
+  if (row.retry_count >= row.max_retries) {
+    await failDeadLetter(env, row.id).catch(() => {});
+    return { ok: false, error: `重试次数已达上限 ${row.max_retries}` };
+  }
+
+  const workflow = parseWorkflowRow(wfRow);
+  const lastInput = (() => {
+    try { return row.last_input_data ? JSON.parse(row.last_input_data) : {}; } catch { return {}; }
+  })();
+  const newExecutionId = crypto.randomUUID();
+
+  // 先写后执行：建 execution → 标记 retrying → 提交 Workflows
+  await withRetry(() => env.DB.prepare(
+    "INSERT INTO executions (id, workflow_id, status, trigger_type, mode, input_data, started_at) VALUES (?,?,'pending','dlq','dlq',?,datetime('now'))",
+  ).bind(newExecutionId, wfRow.id, JSON.stringify(lastInput)).run());
+  await incrementDlqRetry(env, row.id).catch(() => {});
+
+  await env.FLOW_ENGINE.create({
+    id: newExecutionId,
+    params: {
+      workflowId: workflow.id as string,
+      workflowName: workflow.name,
+      nodes: workflow.nodes,
+      connections: workflow.connections,
+      executionId: newExecutionId,
+      mode: 'dlq',
+      input: lastInput,
+      completedNodes: [], // 从入口重跑（精确断点重启目录在 checkpoint，DLQ 走全量重建）
+    },
+  }).catch(() => { /* Workflow 创建失败由 next cron 补偿 */ });
+
+  await withRetry(() => env.DB.prepare("UPDATE executions SET status='running' WHERE id=?").bind(newExecutionId).run()).catch(() => {});
+  return { ok: true, newExecutionId };
 }

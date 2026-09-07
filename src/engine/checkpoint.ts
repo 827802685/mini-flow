@@ -29,11 +29,12 @@ export function freshCheckpoint(workflowId: string, executionId: string): Checkp
 }
 
 // 标记完成
-export function markCompleted(env: Env, executionId: string, workflow: WorkflowRow): Promise<void> {
+export function markCompleted(env: Env, executionId: string, workflow: WorkflowRow, output?: unknown): Promise<void> {
   return withRetry(async () => {
+    const payload = output === undefined ? { workflowName: workflow.name } : output;
     await env.DB.prepare(
       "UPDATE executions SET status='completed', output_data=?, finished_at=datetime('now') WHERE id=?",
-    ).bind(JSON.stringify({ workflowName: workflow.name }), executionId).run();
+    ).bind(JSON.stringify(payload), executionId).run();
   });
 }
 
@@ -42,5 +43,40 @@ export function markFailed(env: Env, executionId: string, error: string): Promis
     await env.DB.prepare(
       "UPDATE executions SET status='failed', error_message=?, finished_at=datetime('now') WHERE id=?",
     ).bind(error, executionId).run();
+  });
+}
+
+// 重试耗尽 → paused（保留检查点供恢复），并释放锁由调用方执行
+export function markPaused(env: Env, executionId: string, error: string): Promise<void> {
+  return withRetry(async () => {
+    await env.DB.prepare(
+      "UPDATE executions SET status='paused', error_message=? WHERE id=?",
+    ).bind(error, executionId).run();
+  });
+}
+
+// 独立节点执行日志（node_executions），供前端运行历史展示
+export interface NodeLog {
+  executionId: string;
+  nodeName: string;
+  nodeType: string;
+  status: 'completed' | 'failed' | 'skipped' | 'running';
+  retryAttempt?: number;
+  inputData?: unknown;
+  outputData?: unknown;
+  errorMessage?: string;
+}
+
+export function logNodeExecution(env: Env, l: NodeLog): Promise<void> {
+  return withRetry(async () => {
+    await env.DB.prepare(
+      `INSERT INTO node_executions (execution_id, node_name, node_type, status, retry_attempt, input_data, output_data, error_message, started_at, finished_at)
+       VALUES (?,?,?,?,?,?,?,?, datetime('now'), datetime('now'))`,
+    ).bind(
+      l.executionId, l.nodeName, l.nodeType, l.status, l.retryAttempt ?? 0,
+      l.inputData !== undefined ? JSON.stringify(l.inputData) : null,
+      l.outputData !== undefined ? JSON.stringify(l.outputData) : null,
+      l.errorMessage ?? null,
+    ).run();
   });
 }

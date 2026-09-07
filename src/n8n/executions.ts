@@ -1,8 +1,8 @@
-// executions: 执行列表/详情（n8n REST）
+// executions: 执行列表/详情/resume（n8n REST）
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { withRetry } from '../engine/retry';
-import type { ExecutionRow } from '../db/schema';
+import { parseWorkflowRow, type ExecutionRow, type WorkflowRow } from '../db/schema';
 
 export const executionRoutes = new Hono<{ Bindings: Env }>()
   .get('/', async (c) => {
@@ -27,6 +27,44 @@ export const executionRoutes = new Hono<{ Bindings: Env }>()
     if (!r) return c.json({ code: 404, message: 'Execution not found', data: undefined }, 404);
     const wf = await c.env.DB.prepare('SELECT name FROM workflows WHERE id=?').bind(r.workflow_id).first<{ name: string }>();
     return c.json({ data: executionDetail(r, wf?.name) });
+  })
+  // POST /rest/executions/:id/resume —— 从检查点恢复一个 paused 的执行
+  .post('/:id/resume', async (c) => {
+    const id = c.req.param('id');
+    const r = await withRetry(() => c.env.DB.prepare('SELECT * FROM executions WHERE id=?').bind(id).first<ExecutionRow>());
+    if (!r) return c.json({ code: 404, message: 'Execution not found', data: undefined }, 404);
+    if (r.status !== 'paused') {
+      return c.json({ code: 409, message: `execution is ${r.status}, only paused can be resumed`, data: undefined }, 409);
+    }
+    const wf = await withRetry(() => c.env.DB.prepare('SELECT * FROM workflows WHERE id=?').bind(r.workflow_id).first<WorkflowRow>());
+    if (!wf) return c.json({ code: 404, message: 'Workflow not found', data: undefined }, 404);
+    const workflow = parseWorkflowRow(wf);
+
+    // 从检查点抽取已完成节点 + 中间数据，作为续跑输入
+    let completedNodes: string[] = [];
+    let data: any = {};
+    try {
+      const cp = r.checkpoint ? JSON.parse(r.checkpoint) : null;
+      completedNodes = cp?.completedNodes ?? [];
+      data = cp?.data ?? {};
+    } catch { /* 检查点损坏则从入口重跑 */ }
+
+    // 复用原 execution id 重新提交 Workflows（原实例已终态，同 id 幂等）
+    void c.env.FLOW_ENGINE.create({
+      id,
+      params: {
+        workflowId: workflow.id as string,
+        workflowName: workflow.name,
+        nodes: workflow.nodes,
+        connections: workflow.connections,
+        executionId: id,
+        mode: r.mode ?? 'manual',
+        input: data,
+        completedNodes,
+      },
+    });
+    await withRetry(() => c.env.DB.prepare("UPDATE executions SET status='running' WHERE id=?").bind(id).run());
+    return c.json({ data: { executionId: id, status: 'running', resumed: true } });
   });
 
 function rst(s: ExecutionRow['status']): string {
