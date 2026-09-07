@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "mini-flow",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-12",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mini-flow-db",
+      "database_id": "<你的 D1 database_id>"
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "CREDENTIALS",
+      "id": "<你的 KV namespace_id>"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PUSH",
+        "class_name": "PushConnection"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PushConnection"]
+    }
+  ],
+
+  "workflows": [
+    {
+      "name": "mini-flow-engine",
+      "binding": "FLOW_ENGINE",
+      "class_name": "FlowEngine"
+    }
+  ],
+
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  }
+}

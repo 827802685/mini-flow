@@ -1,0 +1,22 @@
+{
+  "name": "mini-flow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "把 n8n 搬迁到 Cloudflare Workers 的轻量工作流引擎",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "type-check": "tsc --noEmit",
+    "db:init": "wrangler d1 execute mini-flow-db --file=schema.sql",
+    "db:reset": "wrangler d1 execute mini-flow-db --file=schema.sql --local=false"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260907.1",
+    "typescript": "^5.5.0",
+    "wrangler": "^4.0.0"
+  }
+}
