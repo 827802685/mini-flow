@@ -13,6 +13,9 @@ import {
   noOpNode, errorTriggerNode, respondToWebhookNode, switchNode, removeDuplicatesNode, textSplitterNode,
 } from '../nodes/logic';
 import { filterNode, sortNode, aggregateNode, mathNode, dateTimeNode, extractJsonNode, editFieldsNode } from '../nodes/transform';
+import { d1QueryNode, dbPlaceholderNode } from '../nodes/db';
+import { cronNode, formTriggerNode, intervalNode } from '../nodes/triggers';
+import { openaiChatNode, aiPlaceholderNode } from '../nodes/ai';
 
 type Def = Omit<PluginNodeType, 'typeVersion' | 'version' | 'type'> & {
   type: string; typeVersion: number; version: number | number[];
@@ -93,6 +96,28 @@ const nodes: PluginNodeType[] = [
   def({ type: 'n8n-nodes-base.dateTime', name: 'Date & Time', displayName: 'Date & Time', description: '日期时间计算', group: ['transform'], icon: 'fa:calendar', inputs: ['main'], outputs: ['main'], executor: dateTimeNode }),
   def({ type: 'n8n-nodes-base.extractFromFile', name: 'Extract From File', displayName: 'Extract From File', description: '从 JSON 提取字段', group: ['transform'], icon: 'fa:file-o', inputs: ['main'], outputs: ['main'], executor: extractJsonNode }),
   def({ type: 'n8n-nodes-base.editFields', name: 'Edit Fields', displayName: 'Edit Fields (Set 多字段)', description: '批量写入字段', group: ['transform'], icon: 'fa:edit', inputs: ['main'], outputs: ['main'], executor: editFieldsNode }),
+
+  // ---- 数据库 ----
+  def({ type: 'n8n-nodes-base.d1query', name: 'D1 Query', displayName: 'D1 Query', description: '对 Cloudflare D1(SQLite) 执行 SQL', group: ['action'], categories: ['Database'], icon: 'fa:database', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: 'SQL Query', name: 'query', type: 'string', required: true, default: '', typeOptions: { editor: 'sqlEditor', rows: 5 }, description: '支持 {{ $json.x }} 插值' }], executor: d1QueryNode }),
+  def({ type: 'n8n-nodes-base.mySql', name: 'MySQL', displayName: 'MySQL', description: 'MySQL 数据库（需外部连接）', group: ['action'], categories: ['Database'], icon: 'fa:database', inputs: ['main'], outputs: ['main'], executor: dbPlaceholderNode }),
+  def({ type: 'n8n-nodes-base.postgres', name: 'PostgreSQL', displayName: 'PostgreSQL', description: 'PostgreSQL 数据库（需外部连接）', group: ['action'], categories: ['Database'], icon: 'fa:database', inputs: ['main'], outputs: ['main'], executor: dbPlaceholderNode }),
+  def({ type: 'n8n-nodes-base.sqlite', name: 'SQLite', displayName: 'SQLite', description: 'SQLite 数据库', group: ['action'], categories: ['Database'], icon: 'fa:database', inputs: ['main'], outputs: ['main'], executor: d1QueryNode }),
+
+  // ---- 触发器补充 ----
+  def({ type: 'n8n-nodes-base.cron', name: 'Cron', displayName: 'Cron', description: '按 cron 表达式定时触发', group: ['trigger'], icon: 'fa:calendar-o', inputs: [], outputs: ['main'],
+    properties: [{ displayName: 'Cron Expression', name: 'cronExpression', type: 'string', default: '0 * * * *' }], executor: cronNode }),
+  def({ type: 'n8n-nodes-base.formTrigger', name: 'Form Trigger', displayName: 'Form Trigger', description: '外部表单提交触发', group: ['trigger'], icon: 'fa:wpforms', inputs: [], outputs: ['main'], executor: formTriggerNode }),
+  def({ type: 'n8n-nodes-base.intervalTrigger', name: 'Interval Trigger', displayName: 'Interval Trigger', description: '按固定间隔触发', group: ['trigger'], icon: 'fa:repeat', inputs: [], outputs: ['main'], executor: intervalNode }),
+
+  // ---- AI ----
+  def({ type: 'n8n-nodes-base.openAi', name: 'OpenAI', displayName: 'OpenAI Chat', description: '调用 OpenAI 兼容对话模型', group: ['ai'], categories: ['AI'], icon: 'fa:microchip', inputs: ['main'], outputs: ['main'],
+    properties: [
+      { displayName: 'Model', name: 'model', type: 'string', default: 'gpt-4o-mini' },
+      { displayName: 'Prompt', name: 'prompt', type: 'string', typeOptions: { rows: 4 }, default: '' },
+    ], executor: openaiChatNode }),
+  def({ type: 'n8n-nodes-base.embeddings', name: 'Embeddings', displayName: 'Embeddings', description: '文本向量化（需凭据）', group: ['ai'], categories: ['AI'], icon: 'fa:cube', inputs: ['main'], outputs: ['main'], executor: aiPlaceholderNode }),
+  def({ type: 'n8n-nodes-base.huggingFace', name: 'Hugging Face', displayName: 'Hugging Face', description: 'HF 推理 API（需凭据）', group: ['ai'], categories: ['AI'], icon: 'fa:smile-o', inputs: ['main'], outputs: ['main'], executor: aiPlaceholderNode }),
 ];
 
 export const builtinPlugin: NodePlugin = {

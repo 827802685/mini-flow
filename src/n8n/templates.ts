@@ -5,6 +5,7 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import type { Env } from '../types';
+import { presetById, PRESET_TEMPLATES, presetsToTemplatesResult } from './templates-presets';
 
 const TEMPLATES_HOST = 'https://api.n8n.io/api/';
 
@@ -19,8 +20,20 @@ export const templatesRoutes = new Hono<{ Bindings: Env }>()
 export async function templateProxyHandler(c: Context<{ Bindings: Env }>) {
   const url = new URL(c.req.url);
   const p = url.pathname;
-  // 编辑器导入模板(/workflows/templates/{id}) → 返回可导入 n8n workflow（展开内层），
-  // 其余(/templates/* 详情预览、search、categories…) → 原样透传上游。
+  // —— 本地预设优先 ——
+  // 1) 单个本地预设：/workflows/templates/{id} 或 /templates/{id}，id>=100001 → 本地返回可导入工作流。
+  const importIdMatch = p.match(/\/workflows\/templates\/(\d+)\/?$/);
+  const detailIdMatch = p.match(/\/templates\/(\d+)\/?$/);
+  const presetIdNum = importIdMatch ? Number(importIdMatch[1]) : detailIdMatch ? Number(detailIdMatch[1]) : NaN;
+  if (!Number.isNaN(presetIdNum)) {
+    const preset = presetById(presetIdNum);
+    if (preset) {
+      return c.json({ workflow: preset.workflow });
+    }
+  }
+  // 2) 搜索：上游不可达时回退本地预设（见 catch）。
+  const isSearch = /\/templates\/search/.test(p) || /\/rest\/templates\/search/.test(p);
+
   const isImport = /\/workflows\/templates\/\d+/.test(p);
   // 定位 "/templates" 起始位置，取出其后内容作为上游子路径。
   const ti = p.indexOf('/templates');
@@ -59,6 +72,13 @@ export async function templateProxyHandler(c: Context<{ Bindings: Env }>) {
     }
     return new Response(text, { status: up.status, headers: { 'content-type': ct } });
   } catch (err) {
+    // 上游不可达：搜索类请求回退本地预设，保证模板页始终有内容
+    if (isSearch) {
+      const categoryQs = url.searchParams.get('category') ?? undefined;
+      const cname = categoryQs && categoryQs !== '全部' ? categoryQs : undefined;
+      const filtered = cname ? PRESET_TEMPLATES.filter((t) => t.categories.includes(cname)) : PRESET_TEMPLATES;
+      return c.json({ data: presetsToTemplatesResult(filtered, cname) });
+    }
     return c.json({ code: 502, message: 'Template upstream unreachable', data: undefined }, 502);
   }
 }

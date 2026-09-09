@@ -13,6 +13,9 @@ import {
 import { codeNode } from './code-node';
 import { mergeNode, splitInBatchesNode, delayNode, outputNode } from './common';
 import { filterNode, sortNode, aggregateNode, mathNode, dateTimeNode, extractJsonNode, editFieldsNode } from './transform';
+import { d1QueryNode, dbPlaceholderNode } from './db';
+import { cronNode, formTriggerNode, intervalNode, scheduleTriggerPassthroughNode } from './triggers';
+import { openaiChatNode, aiPlaceholderNode } from './ai';
 
 // stickyNote：画布便签，无逻辑。作为 no-op 透传输入，避免模板内的便签节点中断执行。
 const stickyNoteNode: NodeExecutor = {
@@ -51,6 +54,21 @@ export const nodeRegistry: Array<{ match: RegExp; executor: NodeExecutor }> = [
   { match: /dateTime|date_time|node\.date/i, executor: dateTimeNode },
   { match: /extractFromFile|extractFromJson|extract.*json/i, executor: extractJsonNode },
   { match: /editFields|edit_fields|node\.set\b|node\.editFields/i, executor: editFieldsNode },
+
+  // 数据库
+  { match: /node\.d1|d1query|n8n-nodes-base\.d1/i, executor: d1QueryNode },
+  { match: /mySql|mysql|node\.my_sql/i, executor: dbPlaceholderNode },
+  { match: /postgres|postgresql/i, executor: dbPlaceholderNode },
+  { match: /sqlite/i, executor: d1QueryNode },
+
+  // 触发器补充
+  { match: /node\.cron|cron/i, executor: cronNode },
+  { match: /formTrigger|form_trigger|node\.form/i, executor: formTriggerNode },
+  { match: /intervalTrigger|interval/i, executor: intervalNode },
+
+  // AI
+  { match: /openAi|openai|open_ai|chat/i, executor: openaiChatNode },
+  { match: /embeddings|huggingface|hugging_face|langchain|llm|aiTransform|openai/i, executor: aiPlaceholderNode },
 ];
 
 // 兜底：未知节点 → 返回 passthrough（透传），保证模板执行不中断。
