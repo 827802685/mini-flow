@@ -10,16 +10,23 @@ import { listPending, purgeDeadLetter, rebuildFromDlq } from './engine/dead-lett
 
 const app = new Hono<{ Bindings: Env }>();
 
+// --- Push SSE：转发到 Durable Object，建立 EventSource ---
+// 前端 editor-ui 实际请求 /rest/push（basePath=rest），故这里同时挂 /push 与 /rest/push，
+// 都转发到同一个 DO SSE 端点，避免 SPA fallback 拦截导致 "Lost connection to the server"。
+// /rest/push 必须先于 app.route('/rest', restApi) 注册，否则会被 /rest 子路由吞掉返回 404。
+const mountPush = (app: Hono<{ Bindings: Env }>) => {
+  const forward = (c: import('hono').Context<{ Bindings: Env }>) => {
+    const id = c.env.PUSH.idFromName('main');
+    const stub = c.env.PUSH.get(id);
+    return stub.fetch(new Request('https://do/push', { headers: c.req.raw.headers }));
+  };
+  app.get('/rest/push', forward);
+  app.get('/push', forward);
+};
+mountPush(app);
+
 // --- n8n REST 适配层 ---
 app.route('/rest', restApi);
-
-// --- Push SSE：转发到 Durable Object，建立 EventSource ---
-app.get('/push', async (c) => {
-  const id = c.env.PUSH.idFromName('main');
-  const stub = c.env.PUSH.get(id);
-  // 用 DO 能力子请求打开 SSE（透传）
-  return stub.fetch(new Request('https://do/push', { headers: c.req.raw.headers }));
-});
 
 // --- 静态资源托管 + SPA fallback（n8n editor-ui dist，经 Workers Static Assets） ---
 app.get('*', async (c) => {

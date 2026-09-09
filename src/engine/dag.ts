@@ -18,7 +18,13 @@ export interface DagGraph {
 }
 
 export function compileWorkflow(workflow: N8nWorkflow): DagGraph {
-  const nodes = workflow.nodes.filter((n) => !n.disabled);
+  // 归一化：缺失 name 的节点用 type(位置索引) 兜底，避免整条链 key 变成 "undefined"
+  const raw = workflow.nodes.filter((n) => !n.disabled).map((n, i) => ({ ...n, name: n.name || n.name === '' ? n.name : `node_${i}_${n.type.split('.').pop() ?? 'n'}` }));
+  const nameById = new Map<string, string>();
+  for (const n of raw) if (n.id) nameById.set(n.id, n.name);
+  // 让 connections 里的目标（可能是 id 或 name）与节点 name 对齐
+  const connKey = (key: string) => (nameById.has(key) ? nameById.get(key)! : key);
+  const nodes = raw;
   const edges = new Map<string, Array<{ to: string; branch: number }>>();
   const inDegree = new Map<string, number>();
   for (const n of nodes) inDegree.set(n.name, 0);
@@ -27,11 +33,13 @@ export function compileWorkflow(workflow: N8nWorkflow): DagGraph {
     const mains = conn.main || [];
     for (let branchIdx = 0; branchIdx < mains.length; branchIdx++) {
       for (const target of mains[branchIdx] || []) {
-        if (!inDegree.has(from)) inDegree.set(from, 0);
-        const list = edges.get(from) ?? [];
-        list.push({ to: target.node, branch: branchIdx });
-        edges.set(from, list);
-        inDegree.set(target.node, (inDegree.get(target.node) ?? 0) + 1);
+        const f = connKey(from);
+        const t = connKey(target.node);
+        if (!inDegree.has(f)) inDegree.set(f, 0);
+        const list = edges.get(f) ?? [];
+        list.push({ to: t, branch: branchIdx });
+        edges.set(f, list);
+        inDegree.set(t, (inDegree.get(t) ?? 0) + 1);
       }
     }
   }

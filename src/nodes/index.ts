@@ -6,10 +6,11 @@ import type { NodeExecutor } from '../types';
 
 import { httpRequestNode } from './http-request';
 import { setNode, ifNode } from './if-condition';
-import { scheduleNode, webhookNode } from './webhook';
+import { scheduleNode, webhookNode, manualTriggerNode } from './webhook';
 
 // 关键词 → 执行器。通过节点 type 的子串匹配。
 export const nodeRegistry: Array<{ match: RegExp; executor: NodeExecutor }> = [
+  { match: /manualTrigger|manual_trigger|manual-trigger/i, executor: manualTriggerNode },
   { match: /httpRequest|http_req/i, executor: httpRequestNode },
   { match: /\.set\b|\.set$|set\b/i, executor: setNode },
   { match: /\.if\b|\.if$|if\b/i, executor: ifNode },

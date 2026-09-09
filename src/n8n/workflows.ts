@@ -14,11 +14,18 @@ export const workflowRoutes = new Hono<{ Bindings: Env }>()
   })
   .post('/', async (c) => {
     const body = await c.req.json<N8nWorkflow>();
-    const id = crypto.randomUUID();
+    // 优先采用前端回传的 id（新建工作流 URL 用该 short-id，刷新时用同一 id 取回）；
+    // 无 id 才生成 UUID，保证客户端/服务端 id 一致。
+    const id = body.id ?? crypto.randomUUID();
     await withRetry(() => c.env.DB.prepare(
       "INSERT INTO workflows (id, name, nodes, connections, settings) VALUES (?,?,?,?,?)",
     ).bind(id, body.name, JSON.stringify(body.nodes ?? []), JSON.stringify(body.connections ?? {}), body.settings ? JSON.stringify(body.settings) : null).run());
     return c.json({ data: { id, name: body.name, nodes: body.nodes ?? [], connections: body.connections ?? {}, settings: body.settings, active: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } }, 201);
+  })
+  .get('/:id/exists', async (c) => {
+    const id = c.req.param('id');
+    const row = await withRetry(() => c.env.DB.prepare('SELECT id FROM workflows WHERE id=?').bind(id).first<WorkflowRow>());
+    return c.json({ data: !!row });
   })
   .get('/:id', async (c) => withWorkflow(c.env, c.req.param('id'), async (wf) => c.json({ data: toResponse(wf) }), () => missingWorkflow(c.req.param('id'))))
   .patch('/:id', async (c) => withWorkflow(c.env, c.req.param('id'), async (wf, row) => {
@@ -30,8 +37,30 @@ export const workflowRoutes = new Hono<{ Bindings: Env }>()
   }, () => missingWorkflow(c.req.param('id'))))
   .delete('/:id', async (c) => {
     const id = c.req.param('id');
-    await withRetry(() => c.env.DB.prepare('DELETE FROM workflows WHERE id=?').bind(id).run());
+    // 先删依赖子表（node_executions 有 FK 指向 executions；executions/dead_letter 指向 workflows），
+    // 否则 DELETE workflows 触发外键约束报 500。
+    await withRetry(() => c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM node_executions WHERE execution_id IN (SELECT id FROM executions WHERE workflow_id=?)').bind(id),
+      c.env.DB.prepare('DELETE FROM dead_letter_queue WHERE workflow_id=?').bind(id),
+      c.env.DB.prepare('DELETE FROM executions WHERE workflow_id=?').bind(id),
+      c.env.DB.prepare('DELETE FROM workflows WHERE id=?').bind(id),
+    ]));
     return c.json({ data: { success: true } });
+  })
+  // 查询包含指定节点类型的工作流：POST /rest/workflows/with-node-types
+  // 前端 getWorkflowsWithNodesIncluded 用 nodeTypes 过滤返回 WorkflowResource[]。
+  // 必须注册在 /:id 之前，否则 with-node-types 会被当成 id 捕获。
+  .post('/with-node-types', async (c) => {
+    const body = await c.req.json<{ nodeTypes?: string[] }>().catch(() => ({ nodeTypes: [] }));
+    const want = new Set<string>(body?.nodeTypes ?? []);
+    const res = await withRetry(() => c.env.DB.prepare('SELECT id, name, nodes FROM workflows').all<WorkflowRow>());
+    const matched = (res.results ?? []).filter((r) => {
+      if (want.size === 0) return false;
+      let nodes: unknown[] = [];
+      try { nodes = JSON.parse(r.nodes ?? '[]'); } catch { /* ignore */ }
+      return nodes.some((n: any) => n && typeof n.type === 'string' && want.has(n.type));
+    }).map((r) => ({ id: r.id, name: r.name, nodes: safeParse(r.nodes) }));
+    return c.json({ data: matched });
   })
   // 手动执行：POST /rest/workflows/:id/run
   .post('/:id/run', async (c) => withWorkflow(c.env, c.req.param('id'), async (wf) => {
@@ -72,4 +101,9 @@ function toResponse(wf: N8nWorkflow) {
     id: wf.id, name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: wf.settings,
     active: !!wf.active, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), tags: [],
   };
+}
+
+function safeParse(json: string | null): unknown[] {
+  if (!json) return [];
+  try { return JSON.parse(json); } catch { return []; }
 }

@@ -5,6 +5,27 @@ import { withRetry } from '../engine/retry';
 import { parseWorkflowRow, type ExecutionRow, type WorkflowRow } from '../db/schema';
 
 export const executionRoutes = new Hono<{ Bindings: Env }>()
+  // DEBUG: 仅本地诊断 —— 返回原始执行行 + 节点执行日志，用于排查引擎是否真正跑起来
+  .get('/_debug/:id/raw', async (c) => {
+    const id = c.req.param('id');
+    const row = await c.env.DB.prepare('SELECT * FROM executions WHERE id=?').bind(id).first<ExecutionRow>().catch(() => null);
+    const logs = await c.env.DB.prepare('SELECT node_name, node_type, status, retry_attempt, error_message, output_data, started_at, finished_at FROM node_executions WHERE execution_id=?').bind(id).all().catch(() => ({ results: [] }));
+    return c.json({ data: { row, nodeLogs: logs.results } });
+  })
+  // POST /rest/executions/:id/stop —— 停止运行中的执行（前端 Execute 界面 Stop 按钮）
+  .post('/:id/stop', async (c) => {
+    const id = c.req.param('id');
+    const r = await withRetry(() => c.env.DB.prepare('SELECT * FROM executions WHERE id=?').bind(id).first<ExecutionRow>());
+    if (!r) return c.json({ code: 404, message: 'Execution not found', data: undefined }, 404);
+    // 仅 running/pending/queued 可停止
+    if (r.status !== 'running' && r.status !== 'pending') {
+      return c.json({ data: { id, stopped: false, status: r.status } });
+    }
+    await withRetry(() => c.env.DB.prepare(
+      "UPDATE executions SET status='cancelled', finished_at=datetime('now'), error_message=? WHERE id=?",
+    ).bind('Execution stopped by user', id).run());
+    return c.json({ data: { id, stopped: true, status: 'cancelled' } });
+  })
   .get('/', async (c) => {
     const q = c.req.query();
     const limit = Math.min(100, Number(q.limit ?? 20));

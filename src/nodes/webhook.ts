@@ -8,6 +8,13 @@ export const webhookNode = {
   },
 };
 
+// Manual Trigger（手动触发）：透传输入，保证手动触发的流程能立即完成
+export const manualTriggerNode = {
+  async execute(ctx: NodeExecutionContext) {
+    return { main: ctx.inputData?.main && ctx.inputData.main.length ? ctx.inputData.main : [{ json: { triggeredAt: new Date().toISOString() } }] };
+  },
+};
+
 // Schedule/Cron：由 cron 触发，透传空输入（保证可编排）
 export const scheduleNode = {
   async execute(ctx: NodeExecutionContext) {

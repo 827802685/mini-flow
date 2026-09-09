@@ -61,19 +61,28 @@ export async function startExecution(
   emit({ type: 'executionStarted', executionId });
 
   // 5. 交给 Workflows（runtime/flow-engine.ts）
-  void env.FLOW_ENGINE.create({
-    id: executionId, // 用唯一 id 保证幂等，同一执行只创建一次
-    params: {
-      workflowId,
-      workflowName: workflow.name,
-      nodes: workflow.nodes, // 节点定义数组（flow-engine 编译 DAG 用）
-      connections: workflow.connections,
-      executionId,
-      mode,
-      input: input === undefined ? {} : input,
-      completedNodes: cp.completedNodes, // 断点续跑：恢复已完成的（真实 engine 会再核对 checkpoint）
-    },
-  });
+  // 注意：必须 await `create()`，否则请求返回后 isolate 被回收，create 的派发被中断，
+  // 不会真正产出 Workflow 实例（表现为 execution 永远卡在 running）。create 阻塞时间很短。
+  try {
+    await env.FLOW_ENGINE.create({
+      id: executionId, // 用唯一 id 保证幂等，同一执行只创建一次
+      params: {
+        workflowId,
+        workflowName: workflow.name,
+        nodes: workflow.nodes ?? [], // 节点定义数组（flow-engine 编译 DAG 用）
+        connections: workflow.connections ?? {},
+        executionId,
+        mode,
+        input: input === undefined ? {} : input,
+        completedNodes: cp.completedNodes, // 断点续跑：恢复已完成的（真实 engine 会再核对 checkpoint）
+      },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    await env.DB.prepare("UPDATE executions SET status='failed', error_message=?, finished_at=datetime('now') WHERE id=?")
+      .bind(`创建 FlowEngine 实例失败: ${msg}`, executionId).run().catch(() => {});
+    return { ok: false, executionId, error: `flow engine create failed: ${msg}` };
+  }
 
   // 6. 更新 running 状态（Workflows 异步，这里不 await 完成）
   await withRetry(async () => {
