@@ -16,6 +16,9 @@ import { filterNode, sortNode, aggregateNode, mathNode, dateTimeNode, extractJso
 import { d1QueryNode, dbPlaceholderNode } from '../nodes/db';
 import { cronNode, formTriggerNode, intervalNode } from '../nodes/triggers';
 import { openaiChatNode, aiPlaceholderNode } from '../nodes/ai';
+import { textReplaceNode, regexExtractNode, textCaseNode, textSplitNode, textTemplateNode, textTruncateNode, textCountNode } from '../nodes/text';
+import { limitNode, renameKeysNode, zipNode, itemListsNode, storeNode, convertToJsonNode, joinListNode, assignNode } from '../nodes/util';
+import { httpSendNode, notifyPlaceholderNode, webhookSendNode } from '../nodes/notify';
 
 type Def = Omit<PluginNodeType, 'typeVersion' | 'version' | 'type'> & {
   type: string; typeVersion: number; version: number | number[];
@@ -118,6 +121,64 @@ const nodes: PluginNodeType[] = [
     ], executor: openaiChatNode }),
   def({ type: 'n8n-nodes-base.embeddings', name: 'Embeddings', displayName: 'Embeddings', description: '文本向量化（需凭据）', group: ['ai'], categories: ['AI'], icon: 'fa:cube', inputs: ['main'], outputs: ['main'], executor: aiPlaceholderNode }),
   def({ type: 'n8n-nodes-base.huggingFace', name: 'Hugging Face', displayName: 'Hugging Face', description: 'HF 推理 API（需凭据）', group: ['ai'], categories: ['AI'], icon: 'fa:smile-o', inputs: ['main'], outputs: ['main'], executor: aiPlaceholderNode }),
+
+  // ---- 文本处理（全部真实可执行） ----
+  def({ type: 'n8n-nodes-base.replace', name: 'Text Replace', displayName: 'Text Replace', description: '文本查找替换', group: ['transform'], categories: ['Text'], icon: 'fa:search-replace', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '字段', name: 'field', type: 'string', default: 'text' }, { displayName: '查找', name: 'search', type: 'string', default: '' }, { displayName: '替换', name: 'replace', type: 'string', default: '' }],
+    executor: textReplaceNode }),
+  def({ type: 'n8n-nodes-base.regexExtract', name: 'Regex Extract', displayName: 'Regex Extract', description: '正则提取文本', group: ['transform'], categories: ['Text'], icon: 'fa:terminal', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '字段', name: 'field', type: 'string', default: 'text' }, { displayName: 'Regex', name: 'regex', type: 'string', default: '' }],
+    executor: regexExtractNode }),
+  def({ type: 'n8n-nodes-base.textCase', name: 'Text Case', displayName: 'Text Case', description: '转换大小写', group: ['transform'], categories: ['Text'], icon: 'fa:font', inputs: ['main'], outputs: ['main'],
+    executor: textCaseNode }),
+  def({ type: 'n8n-nodes-base.splitOut', name: 'Text Split', displayName: 'Text Split', description: '按分隔符拆分为数组', group: ['transform'], categories: ['Text'], icon: 'fa:scissors', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '分隔符', name: 'separator', type: 'string', default: ',' }],
+    executor: textSplitNode }),
+  def({ type: 'n8n-nodes-base.textTemplate', name: 'Text Template', displayName: 'Text Template', description: '{{ $json }} 模板插值', group: ['transform'], categories: ['Text'], icon: 'fa:paragraph', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '模板', name: 'template', type: 'string', typeOptions: { rows: 5 }, default: '' }],
+    executor: textTemplateNode }),
+  def({ type: 'n8n-nodes-base.textTruncate', name: 'Text Truncate', displayName: 'Text Truncate', description: '按长度截断', group: ['transform'], categories: ['Text'], icon: 'fa:cut', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '最大长度', name: 'length', type: 'number', default: 100 }],
+    executor: textTruncateNode }),
+  def({ type: 'n8n-nodes-base.textCount', name: 'Text Count', displayName: 'Text Count', description: '统计字符/单词/行数', group: ['transform'], categories: ['Text'], icon: 'fa:counter', inputs: ['main'], outputs: ['main'],
+    executor: textCountNode }),
+
+  // ---- 列表/数据工具（全部真实可执行） ----
+  def({ type: 'n8n-nodes-base.limit', name: 'Limit', displayName: 'Limit', description: '限制输出条数', group: ['transform'], categories: ['Data'], icon: 'fa:filter', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '最大条数', name: 'maxItems', type: 'number', default: 10 }],
+    executor: limitNode }),
+  def({ type: 'n8n-nodes-base.renameKeys', name: 'Rename Keys', displayName: 'Rename Keys', description: '批量重命名字段', group: ['transform'], categories: ['Data'], icon: 'fa:edit', inputs: ['main'], outputs: ['main'],
+    executor: renameKeysNode }),
+  def({ type: 'n8n-nodes-base.zip', name: 'Zip', displayName: 'Zip', description: '多条输入压缩为单条对象', group: ['transform'], categories: ['Data'], icon: 'fa:archive', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '字段名', name: 'field', type: 'string', default: 'items' }],
+    executor: zipNode }),
+  def({ type: 'n8n-nodes-base.itemLists', name: 'Item Lists', displayName: 'Item Lists', description: '把对象数组展开为多行', group: ['transform'], categories: ['Data'], icon: 'fa:list-ul', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '拆分字段', name: 'fieldToSplitName', type: 'string', default: 'items' }],
+    executor: itemListsNode }),
+  def({ type: 'n8n-nodes-base.store', name: 'Store (KV)', displayName: 'Store (KV)', description: '读写 Cloudflare KV(CREDENTIALS)', group: ['action'], categories: ['Storage'], icon: 'fa:key', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '操作', name: 'operation', type: 'string', default: 'get' }, { displayName: '键', name: 'key', type: 'string', default: '' }],
+    executor: storeNode }),
+  def({ type: 'n8n-nodes-base.convertToJson', name: 'Convert To JSON', displayName: 'Convert To JSON', description: 'JSON 字符串转对象并展开', group: ['transform'], categories: ['Data'], icon: 'fa:code', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '源字段', name: 'dataPropertyName', type: 'string', default: 'json' }],
+    executor: convertToJsonNode }),
+  def({ type: 'n8n-nodes-base.joinList', name: 'Join List', displayName: 'Join List', description: '把多行对象合并为单条，按分隔符拼接字段', group: ['transform'], categories: ['Data'], icon: 'fa:arrows-alt-h', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '待拼接字段', name: 'field', type: 'string', default: 'items' }, { displayName: '分隔符', name: 'separator', type: 'string', default: ',' }],
+    executor: joinListNode }),
+  def({ type: 'n8n-nodes-base.assign', name: 'Assign', displayName: 'Assign', description: '给每个输入项赋值变量/字段', group: ['transform'], categories: ['Data'], icon: 'fa:plus-square-o', inputs: ['main'], outputs: ['main'],
+    executor: assignNode }),
+
+  // ---- 消息通讯 ----
+  def({ type: 'n8n-nodes-base.httpSend', name: 'HTTP Send', displayName: 'HTTP Send', description: '通用 HTTP 请求发送（回调/通知）', group: ['action'], categories: ['Communications'], icon: 'fa:paper-plane', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: 'URL', name: 'url', type: 'string', default: '', required: true }, { displayName: 'Method', name: 'method', type: 'options', options: ['GET','POST','PUT','DELETE','PATCH'].map((x)=>({name:x,value:x})) }],
+    executor: httpSendNode }),
+  def({ type: 'n8n-nodes-base.webhookSend', name: 'Webhook Send', displayName: 'Webhook Send', description: '发送到 Webhook 回调地址', group: ['action'], categories: ['Communications'], icon: 'fa:globe', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: 'URL', name: 'url', type: 'string', required: true, default: '' }, { displayName: 'Payload', name: 'message', type: 'json', default: '{}' }],
+    executor: webhookSendNode }),
+  def({ type: 'n8n-nodes-base.sendgrid', name: 'SendGrid', displayName: 'SendGrid (Email)', description: '发送邮件（需 SendGrid API Key）', group: ['action'], categories: ['Communications'], icon: 'fa:envelope-o', inputs: ['main'], outputs: ['main'], executor: notifyPlaceholderNode }),
+  def({ type: 'n8n-nodes-base.email', name: 'Email', displayName: 'Email', description: '发送邮件（需凭据）', group: ['action'], categories: ['Communications'], icon: 'fa:envelope-o', inputs: ['main'], outputs: ['main'], executor: notifyPlaceholderNode }),
+  def({ type: 'n8n-nodes-base.slack', name: 'Slack', displayName: 'Slack', description: 'Slack 消息发送（需凭据）', group: ['action'], categories: ['Communications'], icon: 'fa:slack', inputs: ['main'], outputs: ['main'], executor: notifyPlaceholderNode }),
+  def({ type: 'n8n-nodes-base.telegram', name: 'Telegram', displayName: 'Telegram', description: 'Telegram 消息（需 Bot Token）', group: ['action'], categories: ['Communications'], icon: 'fa:telegram', inputs: ['main'], outputs: ['main'], executor: notifyPlaceholderNode }),
+  def({ type: 'n8n-nodes-base.discord', name: 'Discord', displayName: 'Discord', description: 'Discord 消息（需 Webhook）', group: ['action'], categories: ['Communications'], icon: 'fa:discord', inputs: ['main'], outputs: ['main'], executor: notifyPlaceholderNode }),
 ];
 
 export const builtinPlugin: NodePlugin = {

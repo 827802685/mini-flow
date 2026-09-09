@@ -16,6 +16,9 @@ import { filterNode, sortNode, aggregateNode, mathNode, dateTimeNode, extractJso
 import { d1QueryNode, dbPlaceholderNode } from './db';
 import { cronNode, formTriggerNode, intervalNode, scheduleTriggerPassthroughNode } from './triggers';
 import { openaiChatNode, aiPlaceholderNode } from './ai';
+import { textReplaceNode, regexExtractNode, textCaseNode, textSplitNode, textTemplateNode, textTruncateNode, textCountNode } from './text';
+import { limitNode, renameKeysNode, zipNode, itemListsNode, storeNode, convertToJsonNode, joinListNode, assignNode } from './util';
+import { httpSendNode, notifyPlaceholderNode, webhookSendNode } from './notify';
 
 // stickyNote：画布便签，无逻辑。作为 no-op 透传输入，避免模板内的便签节点中断执行。
 const stickyNoteNode: NodeExecutor = {
@@ -32,7 +35,7 @@ export const nodeRegistry: Array<{ match: RegExp; executor: NodeExecutor }> = [
   { match: /httpRequest|http_req/i, executor: httpRequestNode },
   { match: /\.set\b|\.set$|set\b/i, executor: setNode },
   { match: /\.if\b|\.if$|if\b/i, executor: ifNode },
-  { match: /schedule|cron|interval/i, executor: scheduleNode },
+  { match: /scheduleTrigger|scheduledTrigger|node\.schedule/i, executor: scheduleNode },
   { match: /webhook/i, executor: webhookNode },
   { match: /stickyNote|sticky_note/i, executor: stickyNoteNode },
   { match: /noOp|noop|\bno-op\b/i, executor: noOpNode },
@@ -69,6 +72,30 @@ export const nodeRegistry: Array<{ match: RegExp; executor: NodeExecutor }> = [
   // AI
   { match: /openAi|openai|open_ai|chat/i, executor: openaiChatNode },
   { match: /embeddings|huggingface|hugging_face|langchain|llm|aiTransform|openai/i, executor: aiPlaceholderNode },
+
+  // 文本处理
+  { match: /^.*\.replace\b|textReplace|replace.*text/i, executor: textReplaceNode },
+  { match: /regexExtract|regex.*extract|extract.*regex/i, executor: regexExtractNode },
+  { match: /textCase|case.*text|changeCase|toUpperCase|toLowerCase/i, executor: textCaseNode },
+  { match: /^.*splitOut|textSplit|split.*text/i, executor: textSplitNode },
+  { match: /textTemplate|template.*text/i, executor: textTemplateNode },
+  { match: /truncate|textTruncate/i, executor: textTruncateNode },
+  { match: /textCount|charactersCounter/i, executor: textCountNode },
+
+  // 列表/数据工具
+  { match: /limit/i, executor: limitNode },
+  { match: /renameKeys|rename_keys|rename.*field/i, executor: renameKeysNode },
+  { match: /^.*zip$/i, executor: zipNode },
+  { match: /itemLists|item_lists|flatten/i, executor: itemListsNode },
+  { match: /node\.store|n8n-nodes.redis|kv|keyValue|storage|store/i, executor: storeNode },
+  { match: /convertToJson|convert.*json|stringify|parseJson/i, executor: convertToJsonNode },
+  { match: /itemList.*join|join.*item|aggregate.*item/i, executor: joinListNode },
+  { match: /node\.assign|assign|variables/i, executor: assignNode },
+
+  // 消息/通讯
+  { match: /httpSend|http_request.*send|genericSend/i, executor: httpSendNode },
+  { match: /sendgrid|email|mail|slack|telegram|discord|whatsapp|sms|mailchimp/i, executor: notifyPlaceholderNode },
+  { match: /webhook.*send|send.*webhook/i, executor: webhookSendNode },
 ];
 
 // 兜底：未知节点 → 返回 passthrough（透传），保证模板执行不中断。
