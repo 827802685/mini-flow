@@ -29,19 +29,27 @@ export const executionRoutes = new Hono<{ Bindings: Env }>()
   .get('/', async (c) => {
     const q = c.req.query();
     const limit = Math.min(100, Number(q.limit ?? 20));
-    const res = await withRetry(() => c.env.DB.prepare(
-      'SELECT * FROM executions ORDER BY started_at DESC LIMIT ?',
-    ).bind(limit).all<ExecutionRow>());
-    // n8n 列表需要 id + 关联 workflow 信息的最小形态
-    const data = await Promise.all(res.results.map(async (r) => {
-      const wf = await c.env.DB.prepare('SELECT name FROM workflows WHERE id=?').bind(r.workflow_id).first<{ name: string }>();
+    const offset = Math.max(0, Number(q.offset ?? 0));
+    const wf = q.workflowId ? String(q.workflowId) : null;
+    // n8n 前端执行列表读取 response.data.results（同时用 count/finished/running），
+    // 且工作流执行页会带 workflowId 过滤 —— 两者都必须支持，否则前端显示"No executions"。
+    const where = wf ? ' WHERE workflow_id=?' : '';
+    const base: (string | number)[] = wf ? [wf] : [];
+    const total = (await withRetry(() => c.env.DB.prepare(`SELECT COUNT(*) AS c FROM executions${where}`).bind(...base).first<{ c: number }>()))?.c ?? 0;
+    const qRes = await withRetry(() => c.env.DB.prepare(
+      `SELECT * FROM executions${where} ORDER BY started_at DESC LIMIT ? OFFSET ?`,
+    ).bind(...base, limit, offset).all<ExecutionRow>());
+    const data = await Promise.all(qRes.results.map(async (r) => {
+      const wrow = await c.env.DB.prepare('SELECT name FROM workflows WHERE id=?').bind(r.workflow_id).first<{ name: string }>();
       return {
-        id: r.id, workflowId: r.workflow_id, workflowName: wf?.name ?? r.workflow_id,
-        status: rst(r.status), mode: r.mode ?? 'manual', finished: r.finished_at,
+        id: r.id, workflowId: r.workflow_id, workflowName: wrow?.name ?? r.workflow_id,
+        status: rst(r.status), mode: r.mode ?? 'manual', finished: !!r.finished_at,
         startedAt: r.started_at, stoppedAt: r.finished_at, retryCount: r.retry_count,
       };
     }));
-    return c.json({ data });
+    const finished = data.filter((d) => d.finished).length;
+    const running = data.filter((d) => !d.finished).length;
+    return c.json({ data: { count: total, finished, running, results: data } });
   })
   .get('/:id', async (c) => {
     const r = await withRetry(() => c.env.DB.prepare('SELECT * FROM executions WHERE id=?').bind(c.req.param('id')).first<ExecutionRow>());

@@ -80,6 +80,10 @@ export const settingsRoutes = new Hono<{ Bindings: Env }>()
       concurrency: { productionLimit: 1, queueMode: false },
       maxExecutionTimeout: 3600,
       templatesHost: 'https://api.n8n.io/api/',
+      // 模板市场开关：前端的 isTemplatesEnabled 读 settings.templates.enabled，
+      // 模板请求 base 读 settings.templates.host。host 指向同源，使前端请求 /templates/*
+      // 命中本域名的模板代理（index.ts 中 /templates/* 转发到 api.n8n.io），避免跨域 CORS。
+      templates: { enabled: true, host: origin },
       sso: {
         saml: { loginEnabled: false, loginLabel: 'Sign in with SAML' },
         ldap: { loginEnabled: false, loginLabel: '' },

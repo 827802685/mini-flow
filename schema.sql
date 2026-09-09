@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS workflows (
   settings TEXT,                     -- JSON: 画布设置等
   active INTEGER NOT NULL DEFAULT 0,
   version_id TEXT,
+  project_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -70,6 +71,16 @@ CREATE TABLE IF NOT EXISTS dead_letter_queue (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (execution_id) REFERENCES executions(id)
 );
+
+-- 项目（Projects / teams）：单机. 预留团队项目
+CREATE TABLE IF NOT EXISTS projects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'team',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+INSERT INTO projects (id, name, type) VALUES ('personal', 'Personal', 'personal')
+  ON CONFLICT(id) DO NOTHING;
 
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_executions_locked_at ON executions(locked_at);

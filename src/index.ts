@@ -4,6 +4,7 @@
 import { Hono } from 'hono';
 import type { Env } from './types';
 import { restApi } from './n8n/router';
+import { templateProxyHandler } from './n8n/templates';
 import { sendPush } from './n8n/push';
 import { cleanupStaleLocks } from './engine/lock';
 import { listPending, purgeDeadLetter, rebuildFromDlq } from './engine/dead-letter';
@@ -27,6 +28,18 @@ mountPush(app);
 
 // --- n8n REST 适配层 ---
 app.route('/rest', restApi);
+
+// --- 模板市场 API：前端模板页直接请求同源的 /templates/*（无 /rest 前缀）。
+// 这些是 JSON API（categories / search / collections），须转发到上游模板库；
+// 而纯列表页 /templates（无子路径）与详情页 /templates/{id}/workflow 是 SPA 前端路由，
+// 保持走 index.html。这里显式注册已知 API 端点，避免误拦页面路由。
+app.get('/templates/categories', (c) => templateProxyHandler(c));
+app.get('/templates/search', (c) => templateProxyHandler(c));
+app.get('/templates/collections', (c) => templateProxyHandler(c));
+app.get('/templates/workflows/:id', (c) => templateProxyHandler(c));
+// 编辑器导入模板时，前端以 /workflows/templates/{id} 拉取模板 JSON 填充画布。
+// handler 会提取其中的 /templates/{id} 段并代理到上游详情，返回 {workflow:{...}}。
+app.get('/workflows/templates/:id', (c) => templateProxyHandler(c));
 
 // --- 静态资源托管 + SPA fallback（n8n editor-ui dist，经 Workers Static Assets） ---
 app.get('*', async (c) => {

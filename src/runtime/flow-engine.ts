@@ -56,7 +56,7 @@ export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
 
         const executor = resolveExecutor(node.type);
         if (!executor) {
-          // 未知节点 → DLQ 兜底
+          // 理论上 resolveExecutor 恒返回执行器（未知节点回落 passthrough），这里仅兜底防御。
           await enqueueDeadLetter(env, {
             executionId: p.executionId, workflowId: p.workflowId,
             nodeName: node.name, nodeType: node.type, nodeParameters: node.parameters,

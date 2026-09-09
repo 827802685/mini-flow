@@ -5,13 +5,17 @@ import type { Env } from '../types';
 import { authRoutes } from './auth';
 import { settingsRoutes, userRoutes, userListRoutes, moduleSettingsRoutes } from './settings';
 import { rolesRoutes, variablesRoutes, credentialsAuxRoutes } from './aux';
-import { projectRoutes } from './projects';
+import { projectRoutes, createProject } from './projects';
 import { nodeTypeRoutes, nodeTypeDefs } from './node-types';
+import { listPlugins } from '../plugins';
 import { workflowRoutes } from './workflows';
 import { executionRoutes } from './executions';
 import { dlqRoutes } from './dead-letter';
+import { templatesRoutes } from './templates';
 
-export const restApi = new Hono<{ Bindings: Env }>()
+// strict: false —— 忽略路径尾部斜杠，确保前端访问 /rest/projects/ 与 /rest/projects
+// 均命中同一 handler（Hono 默认 strict:true 会区分尾部斜杠，导致 POST /projects/ 404）
+export const restApi = new Hono<{ Bindings: Env }>({ strict: false })
 
 // 会话列表 + 节点目录：独立子应用（Hono .route() 必须接收子应用而非函数）
 const sessionsRoutes = new Hono<{ Bindings: Env }>()
@@ -43,11 +47,19 @@ restApi
   .route('/sessions', sessionsRoutes)
   .route('/nodes', nodesRoutes)
   .route('/node-types', nodeTypeRoutes)
+  // 插件目录：/rest/plugins（社区插件 / 内置插件清单）
+  .get('/plugins', (c) => c.json({ data: listPlugins() }))
   .route('/workflow-dependencies', workflowDependencyRoutes)
   .route('/projects', projectRoutes)
+  // 创建项目：前端 POST /rest/projects 或 /rest/projects/ 均需命中。
+  // Hono 的 .route(prefix, subapp) 挂载对空路径 POST 不归一化尾部斜杠，
+  // 故在根 restApi 显式注册两种形态，统一走 createProject。
+  .post('/projects', (c) => createProject(c))
+  .post('/projects/', (c) => createProject(c))
   .route('/workflows', workflowRoutes)
   .route('/executions', executionRoutes)
   .route('/dead-letter', dlqRoutes)
+  .route('/templates', templatesRoutes)
   .route('/roles', rolesRoutes)
   .route('/variables', variablesRoutes)
   .route('/credentials', credentialsAuxRoutes)

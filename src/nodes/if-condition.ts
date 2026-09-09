@@ -1,7 +1,6 @@
 // set / if 节点执行器
 import type { NodeExecutionContext } from '../types';
 import { safeEvaluate } from '../engine/evaluator';
-import { interpolate } from './http-request';
 
 // ---- Set：写入字段 ----
 export const setNode = {
@@ -22,15 +21,24 @@ export const setNode = {
 
 function interpKeepType(value: unknown, item: Record<string, any>): unknown {
   if (typeof value !== 'string') return value;
+  const t = value.trim();
+  const em = t.match(/^=\{\{\s*([\s\S]*?)\s*\}\}\s*$/);
+  if (em) {
+    const ppt = em[1].trim().match(/^(?:\$)?json\.([\w.]+)$/);
+    if (ppt) return ppt[1].split('.').reduce<any>((a, k) => (a == null ? a : a[k]), item);
+    const ev = safeEvaluate(em[1].trim(), { json: item });
+    return ev.ok ? ev.value : em[1].trim();
+  }
   const m = value.match(/^\s*\{\{\s*\$?json\.([\w.]+)\s*\}\}\s*$/);
   if (m) {
     const v = m[1].split('.').reduce<any>((a, k) => (a == null ? a : a[k]), item);
     return v === undefined ? null : v;
   }
-  // 表达式
-  const ev = safeEvaluate(value, { json: item });
-  if (ev.ok) return ev.value;
-  return interpolate(value, item);
+  if (value.includes('{{') || value.startsWith('=')) {
+    const ev = safeEvaluate(t, { json: item });
+    if (ev.ok) return ev.value;
+  }
+  return value;
 }
 
 // ---- IF：条件分支 ----
@@ -69,7 +77,7 @@ export function compare(left: unknown, operator: string, right: unknown): boolea
   const bothNum = L !== '' && R !== '' && !isNaN(ln) && !isNaN(rn) && (operator !== 'equal' && operator !== 'equals' && operator !== 'notEqual' && operator !== '==' && operator !== '!=');
   switch (operator) {
     case 'equal': case 'equals': case '==': return String(L) === String(R);
-    case 'notEqual': case '!=': return String(L) !== String(R);
+    case 'notEqual': case 'notEquals': case '!=': return String(L) !== String(R);
     case 'gt': case '>': return (bothNum ? ln : String(L)) > (bothNum ? rn : String(R));
     case 'gte': case '>=': return L >= R;
     case 'lt': case '<': return L < R;
