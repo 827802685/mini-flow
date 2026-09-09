@@ -12,6 +12,7 @@ import { mergeNode, splitInBatchesNode, delayNode, outputNode } from '../nodes/c
 import {
   noOpNode, errorTriggerNode, respondToWebhookNode, switchNode, removeDuplicatesNode, textSplitterNode,
 } from '../nodes/logic';
+import { filterNode, sortNode, aggregateNode, mathNode, dateTimeNode, extractJsonNode, editFieldsNode } from '../nodes/transform';
 
 type Def = Omit<PluginNodeType, 'typeVersion' | 'version' | 'type'> & {
   type: string; typeVersion: number; version: number | number[];
@@ -83,6 +84,15 @@ const nodes: PluginNodeType[] = [
   def({ type: 'n8n-nodes-base.errorTrigger', name: 'Error Trigger', displayName: 'Error Trigger', description: '错误触发（透传）', group: ['trigger'], icon: 'fa:exclamation-circle', inputs: [], outputs: ['main'], executor: errorTriggerNode }),
   def({ type: 'n8n-nodes-base.stickyNote', name: 'Sticky Note', displayName: '便签', description: '画布便签，无逻辑', group: ['auxiliary'], icon: 'fa:sticky-note-o', inputs: [], outputs: [], executor: noOpNode }),
   def({ type: 'n8n-nodes-base.textSplitter', name: 'Text Splitter', displayName: 'Text Splitter', description: '递归文本切块', group: ['transform'], icon: 'fa:scissors', inputs: ['main'], outputs: ['main'], executor: textSplitterNode }),
+
+  // ---- 数据转换/工具（真实可执行） ----
+  def({ type: 'n8n-nodes-base.filter', name: 'Filter', displayName: 'Filter', description: '按条件过滤行', group: ['transform'], icon: 'fa:filter', inputs: ['main'], outputs: ['main'], executor: filterNode }),
+  def({ type: 'n8n-nodes-base.sort', name: 'Sort', displayName: 'Sort', description: '按字段排序', group: ['transform'], icon: 'fa:sort', inputs: ['main'], outputs: ['main'], executor: sortNode }),
+  def({ type: 'n8n-nodes-base.aggregate', name: 'Aggregate', displayName: 'Aggregate', description: '分组聚合(sum/count/avg/min/max)', group: ['transform'], icon: 'fa:table', inputs: ['main'], outputs: ['main'], executor: aggregateNode }),
+  def({ type: 'n8n-nodes-base.math', name: 'Math', displayName: 'Math', description: '四则/公式运算', group: ['transform'], icon: 'fa:calculator', inputs: ['main'], outputs: ['main'], executor: mathNode }),
+  def({ type: 'n8n-nodes-base.dateTime', name: 'Date & Time', displayName: 'Date & Time', description: '日期时间计算', group: ['transform'], icon: 'fa:calendar', inputs: ['main'], outputs: ['main'], executor: dateTimeNode }),
+  def({ type: 'n8n-nodes-base.extractFromFile', name: 'Extract From File', displayName: 'Extract From File', description: '从 JSON 提取字段', group: ['transform'], icon: 'fa:file-o', inputs: ['main'], outputs: ['main'], executor: extractJsonNode }),
+  def({ type: 'n8n-nodes-base.editFields', name: 'Edit Fields', displayName: 'Edit Fields (Set 多字段)', description: '批量写入字段', group: ['transform'], icon: 'fa:edit', inputs: ['main'], outputs: ['main'], executor: editFieldsNode }),
 ];
 
 export const builtinPlugin: NodePlugin = {

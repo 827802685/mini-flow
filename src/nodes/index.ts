@@ -12,6 +12,7 @@ import {
 } from './logic';
 import { codeNode } from './code-node';
 import { mergeNode, splitInBatchesNode, delayNode, outputNode } from './common';
+import { filterNode, sortNode, aggregateNode, mathNode, dateTimeNode, extractJsonNode, editFieldsNode } from './transform';
 
 // stickyNote：画布便签，无逻辑。作为 no-op 透传输入，避免模板内的便签节点中断执行。
 const stickyNoteNode: NodeExecutor = {
@@ -43,6 +44,13 @@ export const nodeRegistry: Array<{ match: RegExp; executor: NodeExecutor }> = [
   { match: /splitInBatches|split_in_batches|splitInBatch/i, executor: splitInBatchesNode },
   { match: /node\.delay|\.delay\b|delay/i, executor: delayNode },
   { match: /outputNode|node\.output|\.output\b/i, executor: outputNode },
+  { match: /node\.filter|\.filter\b|filter/i, executor: filterNode },
+  { match: /node\.sort|\.sort\b/i, executor: sortNode },
+  { match: /node\.aggregate|\.aggregate\b|aggregation/i, executor: aggregateNode },
+  { match: /node\.math|\.math\b|math/i, executor: mathNode },
+  { match: /dateTime|date_time|node\.date/i, executor: dateTimeNode },
+  { match: /extractFromFile|extractFromJson|extract.*json/i, executor: extractJsonNode },
+  { match: /editFields|edit_fields|node\.set\b|node\.editFields/i, executor: editFieldsNode },
 ];
 
 // 兜底：未知节点 → 返回 passthrough（透传），保证模板执行不中断。
