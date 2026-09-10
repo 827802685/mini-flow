@@ -9,6 +9,9 @@ const OWNER_EMAIL = 'admin@example.com';
 export const COOKIE_NAME = 'n8n-auth';
 const SECRET = 'mini-flow-demo-secret';
 
+// cookie 有效期：30 天，同设备二次访问不再弹出登录验证
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
 // 会话判定：请求携带正确的 n8n-auth cookie 才算已登录
 export function isAuthed(c: Context<{ Bindings: Env }>): boolean {
   const h = c.req.header('cookie') ?? '';
@@ -50,8 +53,15 @@ export const authRoutes = new Hono<{ Bindings: Env }>()
   // 登录
   .post('/login', async (c) => {
     return c.json({ data: owner() }, 200, {
-      'Set-Cookie': `${COOKIE_NAME}=${SECRET}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
+      'Set-Cookie': `${COOKIE_NAME}=${SECRET}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}`,
     });
+  })
+  // 登录态探测：editor-ui 启动时 GET /rest/login 判断是否已登录。
+  // 此前缺失 → 落到 SPA fallback 返回 200 HTML，前端解析失败始终判定未登录，
+  // 导致同一设备二次访问仍弹出登录验证。已登录返回当前用户，否则 401。
+  .get('/login', (c) => {
+    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    return c.json({ data: owner() });
   })
   // 注销
   .post('/logout', async (c) => c.json({ data: { loggedOut: true } }));
