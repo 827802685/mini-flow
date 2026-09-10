@@ -2,6 +2,7 @@
 // 以插件形式把节点元数据 + 执行逻辑统一注册。node-types 只读 registry 输出，
 // 保证"编辑器节点面板"与"运行时执行"始终同源，彻底避免节点漏注册。
 import type { NodePlugin, PluginNodeType } from './types';
+import type { MiniNodeType } from '../n8n/node-types';
 import { registerPlugin } from './registry';
 
 import { manualTriggerNode, webhookNode, scheduleNode } from '../nodes/webhook';
@@ -36,6 +37,7 @@ function def(partial: {
   group: string[]; categories?: string[]; icon: string;
   inputs: string[] | string; outputs: string[] | string;
   color?: string; properties?: any[]; version?: number | number[]; typeVersion?: number;
+  codex?: MiniNodeType['codex'];
   executor?: any;
 }): PluginNodeType {
   const { type, displayName, color, properties: props, executor } = partial;
@@ -45,10 +47,21 @@ function def(partial: {
   // 查表会 miss → 图标渲染成 "?" 且无法打开参数面板。故这里强制 name=type。
   // displayName 中文字段友好：defaults.name 用 short 标签（去空格取首个词）
   const short = displayName.length <= 14 ? displayName : displayName.split(/\s+/)[0];
+  const hasExplicitCategories = partial.categories !== undefined;
+  // codex: 供 n8n 编辑器面板按官方分类协议归类。关键：
+  // - AI 面板/目录以 codex.categories 含 'AI' 过滤；
+  // - 常规节点画布面板中 "Core" 等分类以 codex.categories 含 'Core Nodes' 归组。
+  // 未显式声明 categories 的基础节点默认归属 Core Nodes，补齐 codex.categories，
+  // 避免这类节点因无 codex 而落到最末的 "Action in an app" 兜底分类，导致 Core 面板空白。
+  let codex = partial.codex;
+  if (!codex && !hasExplicitCategories) {
+    codex = { categories: ['Core Nodes'] };
+  }
   return {
     type, name: type, typeVersion: partial.typeVersion ?? 1, version: partial.version ?? [1],
     displayName, description: partial.description,
     group: partial.group, categories: partial.categories ?? ['Core Nodes'],
+    codex,
     icon: partial.icon, defaults: { name: short, color: color ?? '#8064a2', typeVersion: partial.typeVersion ?? 1 },
     inputs: partial.inputs, outputs: partial.outputs, properties: props ?? [], executor,
   };
@@ -122,14 +135,14 @@ const nodes: PluginNodeType[] = [
   def({ type: 'n8n-nodes-base.formTrigger', name: 'Form Trigger', displayName: 'Form Trigger', description: '外部表单提交触发', group: ['trigger'], icon: 'fa:file-alt', inputs: [], outputs: ['main'], executor: formTriggerNode }),
   def({ type: 'n8n-nodes-base.intervalTrigger', name: 'Interval Trigger', displayName: 'Interval Trigger', description: '按固定间隔触发', group: ['trigger'], icon: 'fa:repeat', inputs: [], outputs: ['main'], executor: intervalNode }),
 
-  // ---- AI ----
-  def({ type: 'n8n-nodes-base.openAi', name: 'OpenAI', displayName: 'OpenAI Chat', description: '调用 OpenAI 兼容对话模型', group: ['ai'], categories: ['AI'], icon: 'fa:microchip', inputs: ['main'], outputs: ['main'],
+  // ---- AI（codex 使 n8n 编辑器 AI 面板按官方协议归类显示）----
+  def({ type: 'n8n-nodes-base.openAi', name: 'OpenAI', displayName: 'OpenAI Chat', description: '调用 OpenAI 兼容对话模型', group: ['ai'], categories: ['AI'], codex: { categories: ['AI'], subcategories: { AI: ['Language Models'] } }, icon: 'fa:microchip', inputs: ['main'], outputs: ['main'],
     properties: [
       { displayName: 'Model', name: 'model', type: 'string', default: 'gpt-4o-mini' },
       { displayName: 'Prompt', name: 'prompt', type: 'string', typeOptions: { rows: 4 }, default: '' },
     ], executor: openaiChatNode }),
-  def({ type: 'n8n-nodes-base.embeddings', name: 'Embeddings', displayName: 'Embeddings', description: '文本向量化（需凭据）', group: ['ai'], categories: ['AI'], icon: 'fa:cube', inputs: ['main'], outputs: ['main'], executor: aiPlaceholderNode }),
-  def({ type: 'n8n-nodes-base.huggingFace', name: 'Hugging Face', displayName: 'Hugging Face', description: 'HF 推理 API（需凭据）', group: ['ai'], categories: ['AI'], icon: 'fa:smile', inputs: ['main'], outputs: ['main'], executor: aiPlaceholderNode }),
+  def({ type: 'n8n-nodes-base.embeddings', name: 'Embeddings', displayName: 'Embeddings', description: '文本向量化（需凭据）', group: ['ai'], categories: ['AI'], codex: { categories: ['AI'], subcategories: { AI: ['Embeddings'] } }, icon: 'fa:cube', inputs: ['main'], outputs: ['main'], executor: aiPlaceholderNode }),
+  def({ type: 'n8n-nodes-base.huggingFace', name: 'Hugging Face', displayName: 'Hugging Face', description: 'HF 推理 API（需凭据）', group: ['ai'], categories: ['AI'], codex: { categories: ['AI'], subcategories: { AI: ['Language Models'] } }, icon: 'fa:smile', inputs: ['main'], outputs: ['main'], executor: aiPlaceholderNode }),
 
   // ---- 文本处理（全部真实可执行） ----
   def({ type: 'n8n-nodes-base.replace', name: 'Text Replace', displayName: 'Text Replace', description: '文本查找替换', group: ['transform'], categories: ['Text'], icon: 'fa:search', inputs: ['main'], outputs: ['main'],

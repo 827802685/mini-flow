@@ -119,21 +119,44 @@ async function withWorkflow(
   return handler(wf, row);
 }
 
-// 更新工作流（PUT 与 PATCH 共用）：按 body 全量/局部更新 name/nodes/connections/settings/project_id。
+// 更新工作流（PUT 与 PATCH 共用）：按 body 全量/局部更新 name/nodes/connections/settings/project_id/active。
+// 幂等 upsert：新建工作流的 id 由 POST /workflows/new 预取，前端会直接以该 id 发首次 PUT/PATCH；
+// 若该行尚未入库而只做 UPDATE，会命中 withWorkflow 的 404 → 前端报 "Failed to update workflow"。
+// 因此行不存在时改为 INSERT(upsert)，保证自动保存永不因首次保存而 404。
 async function updateWorkflowHandler(c: Context<{ Bindings: Env }>, id: string) {
-  return withWorkflow(c.env, id, async (wf, row) => {
-    const body = await c.req.json<N8nWorkflow>();
-    let sql = "UPDATE workflows SET name=?, nodes=?, connections=?, settings=?, updated_at=datetime('now')";
-    const vals: (string | number | null)[] = [body.name ?? wf.name, JSON.stringify(body.nodes ?? row.nodes), JSON.stringify(body.connections ?? row.connections), body.settings ? JSON.stringify(body.settings) : row.settings];
-    const rawProj = (body as any).projectId as string | null | undefined;
-    const proj: string | null | undefined = rawProj === undefined ? undefined : (rawProj === null ? null : String(rawProj));
-    if (proj !== undefined) { sql += ', project_id=?'; vals.push(proj as string | null); }
+  const row = await withRetry(() => c.env.DB.prepare('SELECT * FROM workflows WHERE id=?').bind(id).first<WorkflowRow>());
+  const body = await c.req.json<N8nWorkflow>().catch(() => ({} as N8nWorkflow));
+  const nodesJson = JSON.stringify(body.nodes ?? (row ? JSON.parse(row.nodes ?? '[]') : []));
+  const connsJson = JSON.stringify(body.connections ?? (row ? JSON.parse(row.connections ?? '{}') : {}));
+  const name = body.name ?? row?.name ?? 'Untitled workflow';
+  const settingsJson = body.settings ? JSON.stringify(body.settings) : (row?.settings ?? null);
+  const rawProj = (body as any).projectId;
+  const proj: string | null = rawProj === undefined ? (row ? ((row as any).project_id ?? null) : null) : (rawProj === null ? null : String(rawProj));
+  const active = body.active !== undefined ? (body.active ? 1 : 0) : (row?.active ?? 0);
+
+  if (!row) {
+    // 首次保存：插入（幂等，重复 PUT 即覆盖）
+    await withRetry(() => c.env.DB.prepare(
+      "INSERT INTO workflows (id, name, nodes, connections, settings, active, project_id) VALUES (?,?,?,?,?,?,?) "
+      + "ON CONFLICT(id) DO UPDATE SET name=excluded.name, nodes=excluded.nodes, connections=excluded.connections, "
+      + "settings=excluded.settings, active=excluded.active, project_id=excluded.project_id, updated_at=datetime('now')",
+    ).bind(id, name, nodesJson, connsJson, settingsJson, active, proj).run());
+  } else {
+    let sql = "UPDATE workflows SET name=?, nodes=?, connections=?, settings=?, active=?, updated_at=datetime('now')";
+    const vals: (string | number | null)[] = [name, nodesJson, connsJson, settingsJson, active];
+    if (proj !== (row as any).project_id) { sql += ', project_id=?'; vals.push(proj); }
     sql += ' WHERE id=?'; vals.push(id);
     await withRetry(() => c.env.DB.prepare(sql).bind(...vals).run());
-    const merged = { ...wf, ...body, nodes: body.nodes ?? wf.nodes, connections: body.connections ?? wf.connections } as any;
-    if (proj !== undefined) merged.projectId = proj;
-    return c.json({ data: toResponse(merged) });
-  }, () => missingWorkflow(id));
+  }
+
+  const merged: any = {
+    id, name,
+    nodes: body.nodes ?? (row ? JSON.parse(row.nodes ?? '[]') : []),
+    connections: body.connections ?? (row ? JSON.parse(row.connections ?? '{}') : {}),
+    settings: body.settings ?? (row?.settings ? JSON.parse(row.settings) : undefined),
+    projectId: proj, active: !!active,
+  };
+  return c.json({ data: toResponse(merged) });
 }
 
 function missingWorkflow(id: string): Response {
