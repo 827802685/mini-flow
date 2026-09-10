@@ -3,11 +3,35 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { isAuthed, owner } from './auth';
 
+// 用户偏好设置（n8n 前端 settings.store 持久化到 /rest/me/settings）。
+// 工作流保存/禁用提示等操作会 PATCH 它；缺失时前端报 "Problem saving workflow" 404。
+// 用 KV(CREDENTIALS) 持久化，跨 request 保持。
+const SETTINGS_KEY = 'user-settings';
+async function getStoredSettings(env: Env): Promise<Record<string, unknown>> {
+  if (!env.CREDENTIALS) return {};
+  const raw = await env.CREDENTIALS.get(SETTINGS_KEY, 'json').catch(() => null);
+  return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+}
+
 export const userRoutes = new Hono<{ Bindings: Env }>()
   .get('/me', (c) => {
     // 未登录 → 401，editor-ui 据此导向登录页
     if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     return c.json({ data: owner() });
+  })
+  // GET /rest/me/settings：返回已保存的用户偏好
+  .get('/me/settings', async (c) => {
+    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    return c.json({ data: await getStoredSettings(c.env) });
+  })
+  // PATCH /rest/me/settings：合并写入用户偏好（前端保存流程会调用）
+  .patch('/me/settings', async (c) => {
+    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    const body = await c.req.json<Record<string, unknown>>().catch(() => ({}));
+    const cur = await getStoredSettings(c.env);
+    const merged = { ...cur, ...body };
+    await (c.env.CREDENTIALS?.put(SETTINGS_KEY, JSON.stringify(merged))).catch(() => undefined);
+    return c.json({ data: merged });
   })
   .get('/', (c) => c.json({ data: [] }));
 

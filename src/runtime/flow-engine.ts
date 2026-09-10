@@ -28,8 +28,33 @@ type NodeOutput = Record<string, Array<{ json: any }>>;
 
 export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
   async run(event: WorkflowEvent<FlowPayload>, step: WorkflowStep) {
-    const p = event.payload;
+    // 归一化 event.payload：兼容三种触发形态
+    //  A) 内部绑定 FLOW_ENGINE.create({ params }) —— payload 即 params 对象（平铺）
+    //  B) REST API create 带 params(JSON 字符串) —— payload={params:'...'}（需解码）
+    //  C) REST API 带 input —— payload={input:{...}}
+    // 解码并合并，保证节点数组 / 执行 ID 等都能被读取。
     const env = this.env;
+    const raw = (event as unknown as { payload?: any }).payload ?? {};
+    let decoded: any = null;
+    if (typeof raw.params === 'string') {
+      try { decoded = JSON.parse(raw.params); } catch { /* keep null */ }
+    } else if (raw.params && typeof raw.params === 'object') {
+      decoded = raw.params;
+    }
+    if (!decoded && raw.input && typeof raw.input === 'object') {
+      decoded = raw.input;
+    }
+    const base = decoded ?? raw;
+    const p: FlowPayload = {
+      workflowId: base.workflowId ?? raw.workflowId ?? 'unknown',
+      workflowName: base.workflowName ?? raw.workflowName ?? 'unknown',
+      nodes: base.nodes ?? raw.nodes ?? [],
+      connections: base.connections ?? raw.connections ?? {},
+      executionId: base.executionId ?? raw.executionId ?? 'exec-' + crypto.randomUUID(),
+      mode: base.mode ?? raw.mode ?? 'manual',
+      input: base.input ?? raw.input ?? {},
+      completedNodes: base.completedNodes ?? raw.completedNodes ?? [],
+    };
     const emit: (e: PushEvent) => void = (e) => { void sendPush(env, e); };
 
     emit({ type: 'executionStarted', executionId: p.executionId });

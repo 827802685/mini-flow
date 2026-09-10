@@ -8,6 +8,8 @@ import { templateProxyHandler } from './n8n/templates';
 import { sendPush } from './n8n/push';
 import { cleanupStaleLocks } from './engine/lock';
 import { listPending, purgeDeadLetter, rebuildFromDlq } from './engine/dead-letter';
+import { runScheduledWorkflows } from './engine/scheduler';
+import { consoleRoute } from './n8n/console';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -41,6 +43,10 @@ app.get('/templates/workflows/:id', (c) => templateProxyHandler(c));
 // handler 会提取其中的 /templates/{id} 段并代理到上游详情，返回 {workflow:{...}}。
 app.get('/workflows/templates/:id', (c) => templateProxyHandler(c));
 
+// --- 管理后台：/console 转发到静态页 console.html（须在 SPA fallback 之前注册） ---
+app.get('/console', (c) => consoleRoute(c));
+app.get('/console/', (c) => consoleRoute(c));
+
 // --- 静态资源托管 + SPA fallback（n8n editor-ui dist，经 Workers Static Assets） ---
 app.get('*', async (c) => {
   const url = new URL(c.req.url);
@@ -73,6 +79,8 @@ const CLEANUP_CRON = async (env: Env) => {
     }
   }
   await purgeDeadLetter(env).catch(() => 0);
+  // 复用同一 cron tick: 运行所有已激活的定时工作流(如 TG抓取→翻译→推送),不新增 cron 名额
+  await runScheduledWorkflows(env).catch(() => 0);
 };
 
 export default {

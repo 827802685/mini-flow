@@ -19,6 +19,8 @@ import { openaiChatNode, aiPlaceholderNode } from './ai';
 import { textReplaceNode, regexExtractNode, textCaseNode, textSplitNode, textTemplateNode, textTruncateNode, textCountNode } from './text';
 import { limitNode, renameKeysNode, zipNode, itemListsNode, storeNode, convertToJsonNode, joinListNode, assignNode } from './util';
 import { httpSendNode, notifyPlaceholderNode, webhookSendNode } from './notify';
+import { telegramChannelNode } from './telegram';
+import { weComSendNode, translateNode } from './messaging';
 
 // stickyNote：画布便签，无逻辑。作为 no-op 透传输入，避免模板内的便签节点中断执行。
 const stickyNoteNode: NodeExecutor = {
@@ -92,10 +94,15 @@ export const nodeRegistry: Array<{ match: RegExp; executor: NodeExecutor }> = [
   { match: /itemList.*join|join.*item|aggregate.*item/i, executor: joinListNode },
   { match: /node\.assign|assign|variables/i, executor: assignNode },
 
-  // 消息/通讯
+  // 通讯
   { match: /httpSend|http_request.*send|genericSend/i, executor: httpSendNode },
+  { match: /telegramChannel|telegram.*channel|fetchChannel|node\.telegram/i, executor: telegramChannelNode },
   { match: /sendgrid|email|mail|slack|telegram|discord|whatsapp|sms|mailchimp/i, executor: notifyPlaceholderNode },
   { match: /webhook.*send|send.*webhook/i, executor: webhookSendNode },
+
+  // 消息自动化（企业微信 / 翻译）
+  { match: /weWork|weCom|we_work|qyapi|corp.*wechat|flag.*wei_xin|enterpriseWechat/i, executor: weComSendNode },
+  { match: /^.*translate|node\.translate|translate/i, executor: translateNode },
 ];
 
 // 兜底：未知节点 → 返回 passthrough（透传），保证模板执行不中断。

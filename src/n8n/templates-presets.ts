@@ -86,6 +86,25 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
       connections: chain(['Manual Trigger', 'Remove Duplicates', 'Sort', 'Aggregate', 'Output']),
     },
   },
+  {
+    id: 100005, name: 'Telegram 频道抓取 → 翻译 → 企业微信推送', description: '定时抓取 6 个 TG 公开频道最新消息，翻译成中文并推送到企业微信群机器人。', categories: ['定时', '消息', 'AI'], icon: 'fa:paper-plane',
+    workflow: {
+      name: 'TG消息翻译推送', active: true,
+      nodes: [
+        trigNode('定时触发', 'n8n-nodes-base.scheduleTrigger', [0, 0], { rule: 'interval', minutesInterval: 30 }),
+        trigNode('抓取频道', 'n8n-nodes-base.telegramChannelReader', [260, 0], {
+          channels: '["FireflyLeak","cyrleak","HXG_Channel","notdim","Galaxy_leak","Seele_Leaks"]',
+          limit: 3, channel: 'FireflyLeak',
+        }),
+        trigNode('翻译', 'n8n-nodes-base.translate', [520, 0], { engine: 'google', target: 'zh-CN', textField: 'text' }),
+        trigNode('推送企业微信', 'n8n-nodes-base.weCom', [780, 0], {
+          webhookUrl: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=50328ac0-206f-4f57-a119-6f724ce6a056',
+          msgtype: 'markdown', content: '',
+        }),
+      ],
+      connections: chain(['定时触发', '抓取频道', '翻译', '推送企业微信']),
+    },
+  },
 ];
 
 // 已存在的顶层"workflow"预设：按 id 快速取一个可导入工作流

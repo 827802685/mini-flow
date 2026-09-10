@@ -1,8 +1,9 @@
 // n8n REST 适配层 —— /rest/* 路由聚合
 // 前端 editor-ui 通过 VUE_APP_URL_BASE_API 指向这里。
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import type { Env } from '../types';
-import { authRoutes } from './auth';
+import { authRoutes, isAuthed } from './auth';
 import { settingsRoutes, userRoutes, userListRoutes, moduleSettingsRoutes } from './settings';
 import { rolesRoutes, variablesRoutes, credentialsAuxRoutes } from './aux';
 import { projectRoutes, createProject } from './projects';
@@ -13,9 +14,33 @@ import { executionRoutes } from './executions';
 import { dlqRoutes } from './dead-letter';
 import { templatesRoutes } from './templates';
 
+const SETTINGS_KEY = 'user-settings';
+async function readSettings(c: Context): Promise<Record<string, unknown>> {
+  const env = c.env as Env;
+  if (!env.CREDENTIALS) return {};
+  const raw = await env.CREDENTIALS.get(SETTINGS_KEY, 'json').catch(() => null);
+  return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+}
+
 // strict: false —— 忽略路径尾部斜杠，确保前端访问 /rest/projects/ 与 /rest/projects
 // 均命中同一 handler（Hono 默认 strict:true 会区分尾部斜杠，导致 POST /projects/ 404）
 export const restApi = new Hono<{ Bindings: Env }>({ strict: false })
+
+// 用户偏好设置：n8n 前端 settings.store 直接 PATCH /rest/me/settings（无 /user 段）。
+// 缺失时工作流保存报 "Problem saving workflow" 404，故在此根挂载。
+restApi
+  .get('/me/settings', async (c) => {
+    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    return c.json({ data: await readSettings(c) });
+  })
+  .patch('/me/settings', async (c) => {
+    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    const body = await c.req.json<Record<string, unknown>>().catch(() => ({}));
+    const merged = { ...(await readSettings(c)), ...body };
+    await (c.env.CREDENTIALS?.put(SETTINGS_KEY, JSON.stringify(merged))).catch(() => undefined);
+    return c.json({ data: merged });
+  })
+  .get('/me/settings', async (c) => c.json({ data: await readSettings(c) }));
 
 // 会话列表 + 节点目录：独立子应用（Hono .route() 必须接收子应用而非函数）
 const sessionsRoutes = new Hono<{ Bindings: Env }>()
@@ -37,6 +62,13 @@ const workflowDependencyRoutes = new Hono<{ Bindings: Env }>()
     for (const id of body.resourceIds ?? []) out[id] = { dependencies: [], inaccessibleCount: 0 };
     return c.json(out);
   });
+
+// 模板导入/编辑器会 POST /rest/webhooks/find 检索匹配的既有 webhook 以便复用。
+// 本精简版无独立 webhook CRUD，返回空数组即可，避免 404。
+restApi.post('/webhooks/find', async (c) => {
+  if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+  return c.json({ data: [] });
+});
 
 restApi
   .route('/settings', settingsRoutes)
