@@ -41,6 +41,12 @@ export const authRoutes = new Hono<{ Bindings: Env }>()
   .post('/owner/setup', async (c) => {
     return c.json({ data: { user: owner() } });
   })
+  // 当前 owner：editor-ui 启动时 GET /rest/owner 读取实例 owner 信息（用户菜单/owner 判定）。
+  // 此前缺失 → SPA 回退返回 index.html，前端 fetch 解析失败。补齐为 n8n 契约形状。
+  .get('/owner', (c) => {
+    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    return c.json({ data: owner() });
+  })
   // 登录
   .post('/login', async (c) => {
     return c.json({ data: owner() }, 200, {

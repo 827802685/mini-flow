@@ -5,8 +5,9 @@ import type { Context } from 'hono';
 import type { Env } from '../types';
 import { authRoutes, isAuthed } from './auth';
 import { settingsRoutes, userRoutes, userListRoutes, moduleSettingsRoutes } from './settings';
-import { rolesRoutes, variablesRoutes, credentialsAuxRoutes } from './aux';
+import { rolesRoutes, variablesRoutes } from './aux';
 import { projectRoutes, createProject } from './projects';
+import { credentialRoutes, credentialTypesHandler } from './credentials';
 import { nodeTypeRoutes, nodeTypeDefs } from './node-types';
 import { listPlugins } from '../plugins';
 import { workflowRoutes } from './workflows';
@@ -94,7 +95,24 @@ restApi
   .route('/templates', templatesRoutes)
   .route('/roles', rolesRoutes)
   .route('/variables', variablesRoutes)
-  .route('/credentials', credentialsAuxRoutes)
+  // 凭据：/credentials CRUD + /credential-types。原 /credentials 只有空的 for-workflow/types，
+  // 现由凭据子系统统一承载，避免编辑器凭据面板空/灰。
+  .route('/credentials', credentialRoutes)
+  // 凭据类型：editor 初始化 fetchCredentialTypes GET /rest/credential-types（单数，独立路由）
+  .get('/credential-types', credentialTypesHandler)
+  // home project：editor projects.store 启动时读取，提供个人项目
+  .get('/home/project', async (c) => {
+    try {
+      const p = await c.env.DB.prepare("SELECT id,name,type,created_at FROM projects WHERE id='personal'").first<{ id: string }>();
+      return c.json({ data: p ? { id: p.id, name: 'Personal', icon: null } : null });
+    } catch { return c.json({ data: null }); }
+  })
+  // meta：实例元信息
+  .get('/meta', (c) => c.json({ data: { instanceId: 'mini-flow-instance', instanceMeta: {} } }))
+  // community-nodes：社区节点清单（空）
+  .get('/community-nodes', (c) => c.json({ data: [] }))
+  // tags：工作流标签
+  .get('/tags', (c) => c.json({ data: [] }))
   // 动态端点：角色/项目等信息由上面提供
   // 仪表盘展示激活状态：GET /rest/active-workflows
   .get('/active-workflows', async (c) => {
