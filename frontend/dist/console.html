@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>mini-flow 控制面板</title>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--panel2:#1d212b;--line:#2a2f3a;--tx:#e6e9ef;--mut:#8b93a1;--acc:#4f8cff;--ok:#2bb673;--err:#e5484d;--run:#f0a020;--wait:#b197d8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  header{padding:14px 22px;background:linear-gradient(90deg,#1b2a4a,#171a21);border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px}
+  header h1{font-size:17px;margin:0}
+  header span{color:var(--mut);font-size:12px}
+  .wrap{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:16px 22px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px}
+  .card h2{font-size:13px;margin:0 0 10px;color:var(--mut);letter-spacing:.5px;text-transform:uppercase}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--mut);font-weight:500;font-size:12px}
+  .row{cursor:pointer}
+  .row.active{background:#1a2436}
+  .row:hover{background:#1f2530}
+  button{background:var(--panel2);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+  button:hover{border-color:var(--acc);color:var(--acc)}
+  button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .switch{display:inline-flex;width:34px;height:18px;border-radius:9px;background:#2a2f3a;position:relative;cursor:pointer;transition:.2s;border:1px solid var(--line);vertical-align:middle}
+  .switch.on{background:var(--ok)}
+  .switch:after{content:"";position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.2s}
+  .switch.on:after{left:17px}
+  .badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+  .b-success{background:#12331f;color:var(--ok)} .b-error{background:#3b1620;color:var(--err)}
+  .b-running{background:#3a2c10;color:var(--run)} .b-queued{background:#2a2340;color:var(--wait)}
+  .b-waiting{background:#2a2340;color:var(--wait)} .b-cancelled{background:#2a2f3a;color:var(--mut)}
+  .form label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+  .form input,.form select,.form textarea{width:100%;background:#0f1115;border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px;font-size:12px}
+  .form textarea{font-family:ui-monospace,Menlo,monospace}
+  .empty{color:var(--mut);padding:16px;text-align:center;font-size:13px}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .muted{color:var(--mut);font-size:12px}
+  #dagBox{overflow:auto;margin-top:14px;border:1px solid var(--line);border-radius:8px;background:#0f1115}
+  .dag-node{fill:#1d212b;stroke:#3a4250;stroke-width:1.5;rx:8}
+  .dag-node.on{stroke:var(--ok)}
+  .dag-edge{stroke:#5a6270;stroke-width:1.5}
+  .dag-label{fill:#e6e9ef;font:13px -apple-system,sans-serif}
+  .dag-sub{fill:#8b93a1;font:11px -apple-system,sans-serif}
+</style>
+</head>
+<body>
+<header><h1>mini-flow 控制面板</h1><span id="host"></span></header>
+<div class="wrap">
+  <div class="left">
+    <div class="card">
+      <h2>工作流</h2>
+      <table><thead><tr><th>名称</th><th style="width:90px">启用</th></tr></thead><tbody id="wfBody"></tbody></table>
+      <div class="bar" style="margin-top:10px"><button class="primary" onclick="reload()">刷新</button></div>
+    </div>
+    <div class="card">
+      <h2>执行历史</h2>
+      <table><thead><tr><th>状态</th><th>开始</th><th>模式</th></tr></thead><tbody id="exBody"></tbody></table>
+    </div>
+  </div>
+  <div class="right">
+    <div class="card">
+      <h2 id="selTitle">选择一个工作流（点击左侧行）</h2>
+      <div id="selBody" class="empty">从左侧点击一个工作流查看参数与画板。</div>
+    </div>
+  </div>
+</div>
+<script>
+const REFRESH_MS = 15000;
+let WORKFLOWS = [];
+let SEL = null;
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s==null?'':s).replace(/[&<>"']/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path, opts={}) {
+  const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opts});
+  const j = await r.json().catch(()=>({data:null}));
+  if (!r.ok && !j.data) throw new Error(j.message || ('HTTP '+r.status));
+  return j;
+}
+const BADGE = {success:'success', error:'error', queued:'queued', running:'running', waiting:'waiting', cancelled:'cancelled'};
+
+async function loadWorkflows() {
+  try {
+    const j = await api('/rest/workflows');
+    WORKFLOWS = Array.isArray(j.data) ? j.data : (j && j.data && j.data.data) || (Array.isArray(j)?j:[]);
+  } catch(e){ WORKFLOWS=[]; }
+  $('#wfBody').innerHTML = WORKFLOWS.length
+    ? WORKFLOWS.map(w=>`<tr class="row ${w.id===SEL?'active':''}" onclick="select('${w.id}')">
+        <td>${esc(w.name)}</td>
+        <td><span class="switch ${w.active?'on':''}" onclick="event.stopPropagation();toggle('${w.id}')"></span></td></tr>`).join('')
+    : '<tr><td colspan="2" class="empty">暂无工作流</td></tr>';
+}
+
+async function toggle(id) {
+  const w = WORKFLOWS.find(x=>x.id===id); if(!w) return;
+  await api('/rest/workflows/'+id+(w.active?'/deactivate':'/activate'), {method:'POST'}).catch(()=>null);
+  w.active = !w.active;
+  loadWorkflows(); if(SEL===id) select(id);
+}
+
+async function run(id) {
+  try { await api('/rest/workflows/'+id+'/run',{method:'POST',body:'{}'}); }
+  catch(e){ alert('触发失败: '+e.message); }
+  setTimeout(loadEx, 1200);
+}
+
+async function select(id) {
+  SEL = id;
+  loadWorkflows();
+  let w = {nodes:[],connections:{},name:'未命名工作流'};
+  try {
+    const j = await api('/rest/workflows/'+id);
+    w = (j && j.data) || w;
+  } catch(e){ w = {nodes:[],connections:{},name:'加载失败'}; }
+  if(!w.nodes) w.nodes=[]; if(!w.connections) w.connections={};
+  renderSel(w);
+}
+
+function renderSel(w) {
+  $('#selTitle').textContent = w.name || '未命名工作流';
+  const tg = w.nodes.find(n=>String(n.type).includes('telegramChannelReader'));
+  const tr = w.nodes.find(n=>String(n.type).includes('translate'));
+  const we = w.nodes.find(n=>String(n.type).includes('weCom'));
+  $('#selBody').innerHTML = `
+    <div class="form">
+      <label>启用状态</label>
+      <input type="text" disabled value="${w.active?'已启用（按设定频率推送）':'未启用'}" />
+      <label>抓取频道 (JSON数组)</label>
+      <textarea rows="2" id="fCh">${esc(JSON.stringify(fixChans(tg?(tg.parameters&&tg.parameters.channels):null)))}</textarea>
+      <label>每频道抓取数</label>
+      <input type="number" id="fLim" value="${tg?(tg.parameters&&tg.parameters.limit)||3:3}" />
+      <label>翻译目标语言</label>
+      <input type="text" id="fTar" value="${tr?((tr.parameters&&tr.parameters.target)||'zh-CN'):'zh-CN'}" />
+      <label>企业微信 Webhook URL</label>
+      <input type="text" id="fWeb" value="${esc(we?(we.parameters&&we.parameters.webhookUrl)||'':'')}" />
+      <label>消息类型</label>
+      <select id="fTyp"><option value="markdown" ${we&&(we.parameters&&we.parameters.msgtype)=='markdown'?'selected':''}>Markdown</option><option value="text" ${we&&(we.parameters&&we.parameters.msgtype)=='text'?'selected':''}>Text</option></select>
+      <div class="bar" style="margin-top:12px">
+        <button class="primary" onclick="saveSel()">保存参数</button>
+        <button onclick="run('${w.id}')">运行一次</button>
+      </div>
+    </div>
+    <div id="dagBox"><div id="dag"></div></div>`;
+  renderDag(w);
+}
+
+function fixChans(v){
+  try{ const a=JSON.parse(String(v)); return Array.isArray(a)?a.map(String):[]; }
+  catch{ return String(v||'').split(/[,，\n]/).filter(Boolean).map(s=>s.trim()); }
+}
+
+async function saveSel() {
+  if(!SEL) return;
+  let w={nodes:[],connections:{}};
+  try { const j=await api('/rest/workflows/'+SEL); w=(j&&j.data)||w; } catch(e){ w={nodes:[],connections:{}}; }
+  if(!w.nodes) w.nodes=[];
+  w.nodes = w.nodes.map(n=>{
+    const P=(n.parameters=n.parameters||{});
+    if(String(n.type).includes('telegramChannelReader')) { P.channels=$('#fCh').value; P.limit=Number($('#fLim').value)||3; }
+    else if(String(n.type).includes('translate')) { P.target=$('#fTar').value; }
+    else if(String(n.type).includes('weCom')) { P.webhookUrl=$('#fWeb').value; P.msgtype=$('#fTyp').value; }
+    return n;
+  });
+  try {
+    await api('/rest/workflows/'+SEL, {method:'PATCH', body: JSON.stringify({ name: w.name, nodes: w.nodes, connections: w.connections })});
+    alert('已保存 ✔');
+  } catch(e){ alert('保存失败: '+e.message); }
+}
+
+function renderDag(w) {
+  const nodes=w.nodes||[], conn=w.connections||{};
+  const W=210,H=64,GX=30,top=50;
+  const idx=new Map(); nodes.forEach((n,i)=>idx.set(n.name,i));
+  const edges=[]; const seen=new Set();
+  for(const [from,v] of Object.entries(conn)){
+    const mains=(v&&v.main)||[];
+    for(const branch of mains) for(const t of (branch||[])){
+      const to=t.node; const k=from+'|'+to;
+      if(!seen.has(k)){seen.add(k);edges.push({from,to});}
+    }
+  }
+  const n=nodes.length;
+  const width=Math.max(120, n*W+GX);
+  let s=`<svg width="${width}" height="220"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5a6270"/></marker></defs>`;
+  for(const e of edges){
+    const a=idx.get(e.from), b=idx.get(e.to); if(a==null||b==null) continue;
+    const x1=a*W+GX, x2=b*W+GX;
+    s+=`<line class="dag-edge" x1="${x1}" y1="${top+H/2}" x2="${x2-GX/2}" y2="${top+H/2}" marker-end="url(#arr)"/>`;
+  }
+  nodes.forEach((nd,i)=>{
+    const x=i*W+GX;
+    const t=String(nd.type||'').split('.').pop();
+    const ch=nd.parameters&&nd.parameters.channel||'';
+    const isRun=/trigger|schedule/i.test(t||'');
+    s+=`<rect class="dag-node ${isRun?'on':''}" x="${x}" y="${top}" width="${W-GX}" height="${H}"/>
+      <text class="dag-label" x="${x+8}" y="${top+20}">${esc(nd.name||'')}</text>
+      <text class="dag-sub" x="${x+8}" y="${top+38}">${esc(t||'')}</text>`;
+    if(ch) s+=`<text class="dag-sub" x="${x+8}" y="${top+52}">@${esc(ch)}</text>`;
+  });
+  s+='</svg>';
+  const box=document.getElementById('dag');
+  box.innerHTML=s;
+  box.scrollLeft = 0;
+}
+
+async function loadEx() {
+  let rows=[];
+  try { const j=await api('/rest/executions?limit=15'); rows=(j.data&&j.data.results)||[]; } catch(e){ rows=[]; }
+  $('#exBody').innerHTML = rows.length
+    ? rows.map(x=>`<tr>
+        <td><span class="badge b-${BADGE[x.status]||'queued'}">${esc(x.status||'')}</span></td>
+        <td class="muted">${esc((x.startedAt||'').slice(5,16))}</td>
+        <td class="muted">${esc(x.mode||'')}</td></tr>`).join('')
+    : '<tr><td colspan="3" class="empty">暂无执行</td></tr>';
+}
+
+setInterval(()=>{ loadWorkflows(); loadEx(); }, REFRESH_MS);
+(async function init(){
+  $('#host').textContent = location.origin;
+  await Promise.all([loadWorkflows(), loadEx()]);
+})();
+</script>
+</body>
+</html>

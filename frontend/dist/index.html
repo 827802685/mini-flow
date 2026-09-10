@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head><script>
+window.__EDERR=[];window.__ALLERR=[];window.__FETCH=[];
+function __st(o){if(o==null)return String(o);if(o instanceof Error)return "ERR:"+o.name+":"+o.message+" || STACK:"+(o.stack||"").slice(0,1500);try{return JSON.stringify(o)&& (typeof o==="object"?JSON.stringify(o):String(o));}catch(e){try{return String(o)}catch(e2){return "[unstringifiable]"}}}
+var _ce=console.error; console.error=function(){ _ce.apply(console,arguments); var a=[].slice.call(arguments); window.__ALLERR.push(a.map(__st)); };
+addEventListener("unhandledrejection",function(e){ var r=e.reason; window.__ALLERR.push(["UNHANDLEDREJECTION", __st(r)]); });
+addEventListener("error",function(e){ window.__ALLERR.push(["GLOBALERR", String(e.message), (e.filename||"")+":"+(e.lineno||""), (e.error&&e.error.stack)?String(e.error.stack).slice(0,1200):""]); });
+var _of=window.fetch; window.fetch=function(){ var url=arguments[0]; var label=(typeof url==="string"?url:(url&&url.url)||"?"); var isRest=label.indexOf("/rest/")>=0||label.indexOf("/login")>=0||label.indexOf("/settings")>=0; if(isRest){ try{ window.__FETCH.push("> "+arguments[1]?.method+" "+label); }catch(e){} } return _of.apply(this,arguments).then(function(res){ if(isRest){ res.clone().text().then(function(t){ try{ window.__FETCH.push("< "+res.status+" "+label+" :: "+t.slice(0,300)); }catch(e){} }); } return res; }); };
+</script>
+
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+		<link rel="icon" href="/favicon.ico" />
+		<script>window.N8N_EDITOR_CONFIG={versionCli:"1.0.0",restEndpoint:"rest",pushBackend:"sse",authMethod:"email",hasCustomersAvailable:false};</script>
+		<link rel="stylesheet" href="/static/prefers-color-scheme.css">
+		<script src="/static/base-path.js" type="text/javascript"></script>
+		<script src="/static/posthog.init.js" type="text/javascript"></script>
+
+		<title>n8n.io - Workflow Automation</title>
+		<script type="module" crossorigin src="/assets/index-BmjVuUas.js"></script>
+		<link rel="modulepreload" crossorigin href="/assets/_plugin-vue_export-helper-Dz3RwLel.js">
+		<link rel="modulepreload" crossorigin href="/assets/chunk-CfVCa4qR.js">
+		<link rel="modulepreload" crossorigin href="/assets/vue.runtime.esm-bundler-CN8O83h0.js">
+		<link rel="modulepreload" crossorigin href="/assets/_MapCache-CTgYIfi7.js">
+		<link rel="modulepreload" crossorigin href="/assets/get-BSgmSKqd.js">
+		<link rel="modulepreload" crossorigin href="/assets/CalendarDate-sqvj9NmK.js">
+		<link rel="modulepreload" crossorigin href="/assets/core-peIWrpLZ.js">
+		<link rel="modulepreload" crossorigin href="/assets/empty-BMs094zv.js">
+		<link rel="modulepreload" crossorigin href="/assets/sanitize-html-BwdPC_cX.js">
+		<link rel="modulepreload" crossorigin href="/assets/en-C_RSmrid.js">
+		<link rel="modulepreload" crossorigin href="/assets/src-CLrXPQhR.js">
+		<link rel="modulepreload" crossorigin href="/assets/merge-Hqov2N-F.js">
+		<link rel="modulepreload" crossorigin href="/assets/expression-runtime-stub-uaO9t_4L.js">
+		<link rel="modulepreload" crossorigin href="/assets/constants-j6z_fOkc.js">
+		<link rel="modulepreload" crossorigin href="/assets/useRootStore-CSv24tvl.js">
+		<link rel="modulepreload" crossorigin href="/assets/settings.store-CBjbujmj.js">
+		<link rel="modulepreload" crossorigin href="/assets/dateformat-NPRG4Psn.js">
+		<link rel="modulepreload" crossorigin href="/assets/_baseOrderBy-C0BvXlBN.js">
+		<link rel="modulepreload" crossorigin href="/assets/useDebounce-BPzOKEpq.js">
+		<link rel="modulepreload" crossorigin href="/assets/users.store-B9YuVw3v.js">
+		<link rel="modulepreload" crossorigin href="/assets/nodeIcon-BdUcDAw6.js">
+		<link rel="modulepreload" crossorigin href="/assets/canvas.utils-VfsT4Xu0.js">
+		<link rel="modulepreload" crossorigin href="/assets/canvas.eventBus-C9uslLUz.js">
+		<link rel="modulepreload" crossorigin href="/assets/uniqBy-CjzB1qbP.js">
+		<link rel="modulepreload" crossorigin href="/assets/NDVEmptyState-Cv4gWOd6.js">
+		<link rel="modulepreload" crossorigin href="/assets/vue-json-pretty-BNi0w5Zx.js">
+		<link rel="modulepreload" crossorigin href="/assets/core-DEyqLWgP.js">
+		<link rel="modulepreload" crossorigin href="/assets/core-hX4-0VUb.js">
+		<link rel="modulepreload" crossorigin href="/assets/xml-C5ie32bN.js">
+		<link rel="modulepreload" crossorigin href="/assets/VueMarkdown-0X6l0-6J.js">
+		<link rel="modulepreload" crossorigin href="/assets/usePinnedData-Bp4C7hBq.js">
+		<link rel="modulepreload" crossorigin href="/assets/executions.store-C-nCuWiS.js">
+		<link rel="modulepreload" crossorigin href="/assets/setupPanel.store-C9kyy83x.js">
+		<link rel="modulepreload" crossorigin href="/assets/nodeTransforms-BUPr7BGq.js">
+		<link rel="modulepreload" crossorigin href="/assets/templateTransforms-Cy5kV_SB.js">
+		<link rel="modulepreload" crossorigin href="/assets/useCanvasOperations-38c5bccc.js">
+		<link rel="modulepreload" crossorigin href="/assets/retry-DdVAwD5w.js">
+		<link rel="modulepreload" crossorigin href="/assets/pushConnection.store-BSjRcjtx.js">
+		<link rel="modulepreload" crossorigin href="/assets/useRunWorkflow-B5GG6eot.js">
+		<link rel="modulepreload" crossorigin href="/assets/collaboration.store-BNxSoFsi.js">
+		<link rel="modulepreload" crossorigin href="/assets/useClipboard-Cx9IN4y8.js">
+		<link rel="modulepreload" crossorigin href="/assets/useInjectWorkflowId-0f3401a5.js">
+		<link rel="modulepreload" crossorigin href="/assets/assistant.store-K_vMuxuh.js">
+		<link rel="modulepreload" crossorigin href="/assets/chatPanel.store-ZGRKqUZ4.js">
+		<link rel="modulepreload" crossorigin href="/assets/dateFormatter-C5aM5rhP.js">
+		<link rel="modulepreload" crossorigin href="/assets/useExecutionHelpers-KWLgIwSm.js">
+		<link rel="modulepreload" crossorigin href="/assets/externalSecrets.ee.store-B5XNZdsk.js">
+		<link rel="modulepreload" crossorigin href="/assets/RunDataHtml-ovzMgMXF.js">
+		<link rel="modulepreload" crossorigin href="/assets/RunData-DCyM875J.js">
+		<link rel="modulepreload" crossorigin href="/assets/exports-B8ACJyIz.js">
+		<link rel="modulepreload" crossorigin href="/assets/vue-B7IxrvHJ.js">
+		<link rel="modulepreload" crossorigin href="/assets/comlink-CMZgzbJW.js">
+		<link rel="modulepreload" crossorigin href="/assets/flatten-BRozU6KU.js">
+		<link rel="modulepreload" crossorigin href="/assets/date-picker-B8__eEWF.js">
+		<link rel="modulepreload" crossorigin href="/assets/dialog-BN_Qgk-M.js">
+		<link rel="modulepreload" crossorigin href="/assets/Draggable-BbwFJLh1.js">
+		<link rel="modulepreload" crossorigin href="/assets/NodeIcon-BfzaM0d3.js">
+		<link rel="modulepreload" crossorigin href="/assets/useCalloutHelpers-BNHzZZk2.js">
+		<link rel="modulepreload" crossorigin href="/assets/useTelemetryContext-TkmEdmGZ.js">
+		<link rel="modulepreload" crossorigin href="/assets/TextWithHighlights-Dx_gDEF0.js">
+		<link rel="modulepreload" crossorigin href="/assets/VirtualSchema-ClGot2fu.js">
+		<link rel="modulepreload" crossorigin href="/assets/DropdownMenu-C1rlGARB.js">
+		<link rel="modulepreload" crossorigin href="/assets/CredentialIcon-BEJr320N.js">
+		<link rel="modulepreload" crossorigin href="/assets/useQuickConnect-BVGdjrFh.js">
+		<link rel="modulepreload" crossorigin href="/assets/useDynamicCredentials-BjeYfK_x.js">
+		<link rel="modulepreload" crossorigin href="/assets/ParameterInputList-SDCO9nI6.js">
+		<link rel="modulepreload" crossorigin href="/assets/chart-DnWXCNlP.js">
+		<link rel="modulepreload" crossorigin href="/assets/col-VdWBiYsn.js">
+		<link rel="modulepreload" crossorigin href="/assets/useFreeAiCredits-NV5QNQ1F.js">
+		<link rel="modulepreload" crossorigin href="/assets/dataTable.store-tU5hwsIx.js">
+		<link rel="modulepreload" crossorigin href="/assets/semver-DI9FWQAC.js">
+		<link rel="modulepreload" crossorigin href="/assets/communityNodes.store-DozQesxl.js">
+		<link rel="modulepreload" crossorigin href="/assets/CommunityNodeUpdateInfo-9NtnaVm3.js">
+		<link rel="modulepreload" crossorigin href="/assets/ContactAdministratorToInstall-DkG9YeIu.js">
+		<link rel="modulepreload" crossorigin href="/assets/useActions-DSOp8e4D.js">
+		<link rel="modulepreload" crossorigin href="/assets/NodeSettings-MlTdkYND.js">
+		<link rel="modulepreload" crossorigin href="/assets/dist-Cjp_6u-o.js">
+		<link rel="modulepreload" crossorigin href="/assets/banners.store-CYnB4HRc.js">
+		<link rel="modulepreload" crossorigin href="/assets/sso.store-BdH_CzlU.js">
+		<link rel="modulepreload" crossorigin href="/assets/roles.store-D9HVN5kF.js">
+		<link rel="modulepreload" crossorigin href="/assets/versions.store-CzpLD6PC.js">
+		<link rel="modulepreload" crossorigin href="/assets/constants-BSFvzaiK.js">
+		<link rel="modulepreload" crossorigin href="/assets/constants-Dcmh1dvc.js">
+		<link rel="modulepreload" crossorigin href="/assets/mcp.constants-CahDcpC7.js">
+		<link rel="modulepreload" crossorigin href="/assets/insights.constants-Cgblm0nZ.js">
+		<link rel="modulepreload" crossorigin href="/assets/insights.utils-Besm9wc1.js">
+		<link rel="modulepreload" crossorigin href="/assets/insights.store-CDfN-jQU.js">
+		<link rel="modulepreload" crossorigin href="/assets/router-D1Xk4tvX.js">
+		<link rel="modulepreload" crossorigin href="/assets/_initCloneObject-1vnr8JTB.js">
+		<link rel="modulepreload" crossorigin href="/assets/table-CZ1-yiFA.js">
+		<link rel="modulepreload" crossorigin href="/assets/radio-0_xgdcnr.js">
+		<link rel="modulepreload" crossorigin href="/assets/values-k9Y4h-Nm.js">
+		<link rel="modulepreload" crossorigin href="/assets/shuffle-R6eL_qGg.js">
+		<link rel="modulepreload" crossorigin href="/assets/orderBy-CKuEr7q9.js">
+		<link rel="modulepreload" crossorigin href="/assets/TimeAgo-CEsp9fgS.js">
+		<link rel="modulepreload" crossorigin href="/assets/KeyboardShortcutTooltip-DXRsBbGk.js">
+		<link rel="modulepreload" crossorigin href="/assets/useKeybindings-CKy0Yth0.js">
+		<link rel="modulepreload" crossorigin href="/assets/chatHubPanel.store-DaOeJXny.js">
+		<link rel="modulepreload" crossorigin href="/assets/useNodeCreatorShortcutCoachmark-qRR1FKG4.js">
+		<link rel="modulepreload" crossorigin href="/assets/useExpressionResolveCtx-B8KhjJ67.js">
+		<link rel="modulepreload" crossorigin href="/assets/useCanvasMapping-DtVbDL0i.js">
+		<link rel="modulepreload" crossorigin href="/assets/WorkflowDiffView-DKnWD-Go.js">
+		<link rel="modulepreload" crossorigin href="/assets/fileUtils-kUef_QAH.js">
+		<link rel="modulepreload" crossorigin href="/assets/chat.store-CXi7lneG.js">
+		<link rel="modulepreload" crossorigin href="/assets/ProjectIcon-BEKHe-N5.js">
+		<link rel="modulepreload" crossorigin href="/assets/apiKeys.store-CaJEmeqN.js">
+		<link rel="modulepreload" crossorigin href="/assets/logStreaming.store-B2pNkb6c.js">
+		<link rel="modulepreload" crossorigin href="/assets/usage.store-CLZb6-ey.js">
+		<link rel="modulepreload" crossorigin href="/assets/CopyInput-BsIK6Tgv.js">
+		<link rel="modulepreload" crossorigin href="/assets/EnterpriseEdition.ee-Db5NZjY7.js">
+		<link rel="modulepreload" crossorigin href="/assets/Modal-DOT9OrBF.js">
+		<link rel="modulepreload" crossorigin href="/assets/useBugReporting-BAkeu-PK.js">
+		<link rel="modulepreload" crossorigin href="/assets/sortByProperty-DcBiSPEK.js">
+		<link rel="modulepreload" crossorigin href="/assets/usePageRedirectionHelper-DhtblrfK.js">
+		<link rel="modulepreload" crossorigin href="/assets/useGlobalEntityCreation-rIAXMQ1H.js">
+		<link rel="modulepreload" crossorigin href="/assets/CanvasRunWorkflowButton-Dshj2e-w.js">
+		<link rel="modulepreload" crossorigin href="/assets/useProvideWorkflowId-CIEq5qS9.js">
+		<link rel="modulepreload" crossorigin href="/assets/useWorkflowActivate-Cmjn37Sg.js">
+		<link rel="modulepreload" crossorigin href="/assets/BaseLayout-DV7XzeAZ.js">
+		<link rel="modulepreload" crossorigin href="/assets/CredentialPicker-CCfNGVK7.js">
+		<link rel="modulepreload" crossorigin href="/assets/SetupTemplateFormStep-LmZjhZAS.js">
+		<link rel="modulepreload" crossorigin href="/assets/LoadingView-Cm1Bs9EH.js">
+		<link rel="modulepreload" crossorigin href="/assets/instanceAiSettings.store-DRc9jVWQ.js">
+		<link rel="modulepreload" crossorigin href="/assets/CreditWarningBanner-vZHu9c5w.js">
+		<link rel="modulepreload" crossorigin href="/assets/useMcp-ES5YdhRv.js">
+		<link rel="modulepreload" crossorigin href="/assets/ProjectCardBadge-CSKZ9Zli.js">
+		<link rel="modulepreload" crossorigin href="/assets/ProjectSharing-DYJlnwub.js">
+		<link rel="modulepreload" crossorigin href="/assets/auth.eventBus-BeqQ9vXa.js">
+		<link rel="modulepreload" crossorigin href="/assets/folders.store-BkuxqR-k.js">
+		<link rel="modulepreload" crossorigin href="/assets/one-password-hU0RpwVu.js">
+		<link rel="modulepreload" crossorigin href="/assets/ExternalSecretsProviderConnectionSwitch.ee-CvSSuMN5.js">
+		<link rel="modulepreload" crossorigin href="/assets/SecretsProviderImage.ee-_254ll5E.js">
+		<link rel="modulepreload" crossorigin href="/assets/useSecretsProviderConnection.ee-B3x6tG9R.js">
+		<link rel="modulepreload" crossorigin href="/assets/sourceControl.eventBus-BLCELNLD.js">
+		<link rel="modulepreload" crossorigin href="/assets/useCredentialResolvers-QAkdOvVF.js">
+		<link rel="modulepreload" crossorigin href="/assets/TagsDropdown-CeA72rdU.js">
+		<link rel="modulepreload" crossorigin href="/assets/WorkflowTagsDropdown-ejQAjjBH.js">
+		<link rel="modulepreload" crossorigin href="/assets/utils-UuxzSlZr.js">
+		<link rel="stylesheet" crossorigin href="/assets/src-DBVOVeEU.css">
+		<link rel="stylesheet" crossorigin href="/assets/NDVEmptyState-rnKuZ72v.css">
+		<link rel="stylesheet" crossorigin href="/assets/useCanvasOperations-CCjgcrri.css">
+		<link rel="stylesheet" crossorigin href="/assets/RunDataHtml-Dn-4rgtR.css">
+		<link rel="stylesheet" crossorigin href="/assets/RunData-C9xLKitW.css">
+		<link rel="stylesheet" crossorigin href="/assets/Draggable-B0pfmmgs.css">
+		<link rel="stylesheet" crossorigin href="/assets/NodeIcon-Cd4SL1LV.css">
+		<link rel="stylesheet" crossorigin href="/assets/useTelemetryContext-DP1IjWBS.css">
+		<link rel="stylesheet" crossorigin href="/assets/TextWithHighlights-CnnnTpA3.css">
+		<link rel="stylesheet" crossorigin href="/assets/VirtualSchema-DPYoZ503.css">
+		<link rel="stylesheet" crossorigin href="/assets/CredentialIcon-D9KQZeCk.css">
+		<link rel="stylesheet" crossorigin href="/assets/ParameterInputList-BuR2nAip.css">
+		<link rel="stylesheet" crossorigin href="/assets/CommunityNodeUpdateInfo-Bi69iCuf.css">
+		<link rel="stylesheet" crossorigin href="/assets/ContactAdministratorToInstall-CHK0v6tR.css">
+		<link rel="stylesheet" crossorigin href="/assets/NodeSettings-BDyVyTva.css">
+		<link rel="stylesheet" crossorigin href="/assets/banners-CfXPQxke.css">
+		<link rel="stylesheet" crossorigin href="/assets/KeyboardShortcutTooltip-Bz9DcSWs.css">
+		<link rel="stylesheet" crossorigin href="/assets/useCanvasMapping-SM82rIXL.css">
+		<link rel="stylesheet" crossorigin href="/assets/WorkflowDiffView-AXYJbw3w.css">
+		<link rel="stylesheet" crossorigin href="/assets/ProjectIcon-DR9446m8.css">
+		<link rel="stylesheet" crossorigin href="/assets/CopyInput-BtZayXH3.css">
+		<link rel="stylesheet" crossorigin href="/assets/Modal-C00R9oLp.css">
+		<link rel="stylesheet" crossorigin href="/assets/CanvasRunWorkflowButton-MqoOLOO1.css">
+		<link rel="stylesheet" crossorigin href="/assets/BaseLayout-BMYrg7wB.css">
+		<link rel="stylesheet" crossorigin href="/assets/CredentialPicker-C5V1YAkb.css">
+		<link rel="stylesheet" crossorigin href="/assets/SetupTemplateFormStep-3ogHiUKu.css">
+		<link rel="stylesheet" crossorigin href="/assets/LoadingView-DYCNmVIf.css">
+		<link rel="stylesheet" crossorigin href="/assets/CreditWarningBanner-Dg9dokHb.css">
+		<link rel="stylesheet" crossorigin href="/assets/ProjectCardBadge-CPGb5FR4.css">
+		<link rel="stylesheet" crossorigin href="/assets/ProjectSharing-DHoWOCEa.css">
+		<link rel="stylesheet" crossorigin href="/assets/ExternalSecretsProviderConnectionSwitch-CkTWLm8f.css">
+		<link rel="stylesheet" crossorigin href="/assets/useCredentialResolvers-CA1O2PID.css">
+		<link rel="stylesheet" crossorigin href="/assets/TagsDropdown-BhpNFWHz.css">
+		<link rel="stylesheet" crossorigin href="/assets/index-Bbaz73HD.css">
+		<script type="module">import'data:text/javascript,if(!import.meta.resolve)throw Error("import.meta.resolve not supported")';import.meta.url;import("_").catch(()=>1);(async function*(){})().next();window.__vite_is_modern_browser=true</script>
+		<script type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
+	</head>
+	<body>
+		<noscript>
+			<strong
+				>We're sorry but the n8n Editor-UI doesn't work properly without JavaScript enabled. Please
+				enable it to continue.</strong
+			>
+		</noscript>
+		<div id="app"></div>
+		<script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
+		<script nomodule crossorigin id="vite-legacy-polyfill" src="/assets/polyfills-legacy-aAMUoklQ.js"></script>
+		<script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-DODZiUc0.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+	</body>
+</html>

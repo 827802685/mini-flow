@@ -1,0 +1,206 @@
+{
+  "n8n-nodes-base.manualTrigger": [
+    1
+  ],
+  "n8n-nodes-base.webhook": [
+    1
+  ],
+  "n8n-nodes-base.scheduleTrigger": [
+    1
+  ],
+  "n8n-nodes-base.if": [
+    1
+  ],
+  "n8n-nodes-base.switch": [
+    1
+  ],
+  "n8n-nodes-base.set": [
+    1
+  ],
+  "n8n-nodes-base.merge": [
+    1
+  ],
+  "n8n-nodes-base.removeDuplicates": [
+    1
+  ],
+  "n8n-nodes-base.splitInBatches": [
+    1
+  ],
+  "n8n-nodes-base.delay": [
+    1
+  ],
+  "n8n-nodes-base.httpRequest": [
+    1
+  ],
+  "n8n-nodes-base.code": [
+    1
+  ],
+  "n8n-nodes-base.function": [
+    1
+  ],
+  "n8n-nodes-base.outputNode": [
+    1
+  ],
+  "n8n-nodes-base.noOp": [
+    1
+  ],
+  "n8n-nodes-base.respondToWebhook": [
+    1
+  ],
+  "n8n-nodes-base.errorTrigger": [
+    1
+  ],
+  "n8n-nodes-base.stickyNote": [
+    1
+  ],
+  "n8n-nodes-base.textSplitter": [
+    1
+  ],
+  "n8n-nodes-base.filter": [
+    1
+  ],
+  "n8n-nodes-base.sort": [
+    1
+  ],
+  "n8n-nodes-base.aggregate": [
+    1
+  ],
+  "n8n-nodes-base.math": [
+    1
+  ],
+  "n8n-nodes-base.dateTime": [
+    1
+  ],
+  "n8n-nodes-base.extractFromFile": [
+    1
+  ],
+  "n8n-nodes-base.editFields": [
+    1
+  ],
+  "n8n-nodes-base.d1query": [
+    1
+  ],
+  "n8n-nodes-base.mySql": [
+    1
+  ],
+  "n8n-nodes-base.postgres": [
+    1
+  ],
+  "n8n-nodes-base.sqlite": [
+    1
+  ],
+  "n8n-nodes-base.cron": [
+    1
+  ],
+  "n8n-nodes-base.formTrigger": [
+    1
+  ],
+  "n8n-nodes-base.intervalTrigger": [
+    1
+  ],
+  "n8n-nodes-base.openAi": [
+    1
+  ],
+  "n8n-nodes-base.embeddings": [
+    1
+  ],
+  "n8n-nodes-base.huggingFace": [
+    1
+  ],
+  "n8n-nodes-base.replace": [
+    1
+  ],
+  "n8n-nodes-base.regexExtract": [
+    1
+  ],
+  "n8n-nodes-base.textCase": [
+    1
+  ],
+  "n8n-nodes-base.splitOut": [
+    1
+  ],
+  "n8n-nodes-base.textTemplate": [
+    1
+  ],
+  "n8n-nodes-base.textTruncate": [
+    1
+  ],
+  "n8n-nodes-base.textCount": [
+    1
+  ],
+  "n8n-nodes-base.limit": [
+    1
+  ],
+  "n8n-nodes-base.renameKeys": [
+    1
+  ],
+  "n8n-nodes-base.zip": [
+    1
+  ],
+  "n8n-nodes-base.itemLists": [
+    1
+  ],
+  "n8n-nodes-base.store": [
+    1
+  ],
+  "n8n-nodes-base.convertToJson": [
+    1
+  ],
+  "n8n-nodes-base.joinList": [
+    1
+  ],
+  "n8n-nodes-base.assign": [
+    1
+  ],
+  "n8n-nodes-base.httpSend": [
+    1
+  ],
+  "n8n-nodes-base.webhookSend": [
+    1
+  ],
+  "n8n-nodes-base.sendgrid": [
+    1
+  ],
+  "n8n-nodes-base.email": [
+    1
+  ],
+  "n8n-nodes-base.slack": [
+    1
+  ],
+  "n8n-nodes-base.telegram": [
+    1
+  ],
+  "n8n-nodes-base.discord": [
+    1
+  ],
+  "n8n-nodes-base.telegramChannelReader": [
+    1
+  ],
+  "n8n-nodes-base.weCom": [
+    1
+  ],
+  "n8n-nodes-base.translate": [
+    1
+  ],
+  "n8n-nodes-base.keepFields": [
+    1
+  ],
+  "n8n-nodes-base.dropFields": [
+    1
+  ],
+  "n8n-nodes-base.textTrim": [
+    1
+  ],
+  "n8n-nodes-base.textSlice": [
+    1
+  ],
+  "n8n-nodes-base.flatten": [
+    1
+  ],
+  "n8n-nodes-base.splitToItems": [
+    1
+  ],
+  "n8n-nodes-base.addMeta": [
+    1
+  ]
+}
