@@ -14,6 +14,11 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ]
+    },
     "icon": "fa:mouse-pointer",
     "defaults": {
       "name": "Manual Trigger",
@@ -41,6 +46,11 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ]
+    },
     "icon": "fa:globe",
     "defaults": {
       "name": "Webhook",
@@ -112,6 +122,11 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ]
+    },
     "icon": "fa:clock",
     "defaults": {
       "name": "定时 Cron",
@@ -169,6 +184,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Flow"
+        ]
+      }
+    },
     "icon": "fa:code-branch",
     "defaults": {
       "name": "条件判断 IF",
@@ -206,6 +231,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Flow"
+        ]
+      }
+    },
     "icon": "fa:code-branch",
     "defaults": {
       "name": "Switch",
@@ -235,6 +270,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:pen",
     "defaults": {
       "name": "字段赋值 Set",
@@ -264,6 +309,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Flow"
+        ]
+      }
+    },
     "icon": "fa:code-merge",
     "defaults": {
       "name": "Merge",
@@ -294,6 +349,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:clone",
     "defaults": {
       "name": "Remove",
@@ -323,6 +388,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Flow"
+        ]
+      }
+    },
     "icon": "fa:columns",
     "defaults": {
       "name": "Split",
@@ -352,6 +427,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Flow"
+        ]
+      }
+    },
     "icon": "fa:clock",
     "defaults": {
       "name": "Delay",
@@ -381,6 +466,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:paper-plane",
     "defaults": {
       "name": "HTTP Request",
@@ -461,6 +556,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:code",
     "defaults": {
       "name": "Code",
@@ -501,6 +606,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:tachometer-alt",
     "defaults": {
       "name": "受限求值",
@@ -530,6 +645,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:sign-out-alt",
     "defaults": {
       "name": "Output",
@@ -559,6 +684,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Flow"
+        ]
+      }
+    },
     "icon": "fa:circle",
     "defaults": {
       "name": "NoOp",
@@ -588,6 +723,11 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ]
+    },
     "icon": "fa:undo",
     "defaults": {
       "name": "Respond",
@@ -617,6 +757,11 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ]
+    },
     "icon": "fa:exclamation-circle",
     "defaults": {
       "name": "Error Trigger",
@@ -644,6 +789,11 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ]
+    },
     "icon": "fa:sticky-note",
     "defaults": {
       "name": "便签",
@@ -669,6 +819,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:scissors",
     "defaults": {
       "name": "Text Splitter",
@@ -698,6 +858,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:filter",
     "defaults": {
       "name": "Filter",
@@ -727,6 +897,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:sort",
     "defaults": {
       "name": "Sort",
@@ -756,6 +936,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:table",
     "defaults": {
       "name": "Aggregate",
@@ -785,6 +975,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:calculator",
     "defaults": {
       "name": "Math",
@@ -814,6 +1014,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:calendar",
     "defaults": {
       "name": "Date & Time",
@@ -843,6 +1053,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:file",
     "defaults": {
       "name": "Extract",
@@ -872,6 +1092,16 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:pen",
     "defaults": {
       "name": "Edit",
@@ -901,6 +1131,16 @@
     "categories": [
       "Database"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:database",
     "defaults": {
       "name": "D1 Query",
@@ -943,6 +1183,16 @@
     "categories": [
       "Database"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:database",
     "defaults": {
       "name": "MySQL",
@@ -972,6 +1222,16 @@
     "categories": [
       "Database"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:database",
     "defaults": {
       "name": "PostgreSQL",
@@ -1001,6 +1261,16 @@
     "categories": [
       "Database"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:database",
     "defaults": {
       "name": "SQLite",
@@ -1030,6 +1300,11 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ]
+    },
     "icon": "fa:calendar",
     "defaults": {
       "name": "Cron",
@@ -1064,6 +1339,11 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ]
+    },
     "icon": "fa:file-alt",
     "defaults": {
       "name": "Form Trigger",
@@ -1091,6 +1371,11 @@
     "categories": [
       "Core Nodes"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ]
+    },
     "icon": "fa:repeat",
     "defaults": {
       "name": "Interval",
@@ -1118,6 +1403,16 @@
     "categories": [
       "AI"
     ],
+    "codex": {
+      "categories": [
+        "AI"
+      ],
+      "subcategories": {
+        "AI": [
+          "Language Models"
+        ]
+      }
+    },
     "icon": "fa:microchip",
     "defaults": {
       "name": "OpenAI Chat",
@@ -1163,6 +1458,16 @@
     "categories": [
       "AI"
     ],
+    "codex": {
+      "categories": [
+        "AI"
+      ],
+      "subcategories": {
+        "AI": [
+          "Embeddings"
+        ]
+      }
+    },
     "icon": "fa:cube",
     "defaults": {
       "name": "Embeddings",
@@ -1192,6 +1497,16 @@
     "categories": [
       "AI"
     ],
+    "codex": {
+      "categories": [
+        "AI"
+      ],
+      "subcategories": {
+        "AI": [
+          "Language Models"
+        ]
+      }
+    },
     "icon": "fa:smile",
     "defaults": {
       "name": "Hugging Face",
@@ -1221,6 +1536,16 @@
     "categories": [
       "Text"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:search",
     "defaults": {
       "name": "Text Replace",
@@ -1269,6 +1594,16 @@
     "categories": [
       "Text"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:terminal",
     "defaults": {
       "name": "Regex Extract",
@@ -1311,6 +1646,16 @@
     "categories": [
       "Text"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:font",
     "defaults": {
       "name": "Text Case",
@@ -1340,6 +1685,16 @@
     "categories": [
       "Text"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:scissors",
     "defaults": {
       "name": "Text Split",
@@ -1376,6 +1731,16 @@
     "categories": [
       "Text"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:paragraph",
     "defaults": {
       "name": "Text Template",
@@ -1415,6 +1780,16 @@
     "categories": [
       "Text"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:cut",
     "defaults": {
       "name": "Text Truncate",
@@ -1451,6 +1826,16 @@
     "categories": [
       "Text"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:hashtag",
     "defaults": {
       "name": "Text Count",
@@ -1480,6 +1865,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:filter",
     "defaults": {
       "name": "Limit",
@@ -1516,6 +1911,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:pen",
     "defaults": {
       "name": "Rename Keys",
@@ -1545,6 +1950,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:archive",
     "defaults": {
       "name": "Zip",
@@ -1581,6 +1996,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:list-ul",
     "defaults": {
       "name": "Item Lists",
@@ -1617,6 +2042,16 @@
     "categories": [
       "Storage"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:key",
     "defaults": {
       "name": "Store (KV)",
@@ -1659,6 +2094,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:code",
     "defaults": {
       "name": "Convert",
@@ -1695,6 +2140,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:arrows-alt-h",
     "defaults": {
       "name": "Join List",
@@ -1737,6 +2192,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:plus-square",
     "defaults": {
       "name": "Assign",
@@ -1766,6 +2231,16 @@
     "categories": [
       "Communications"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:paper-plane",
     "defaults": {
       "name": "HTTP Send",
@@ -1830,6 +2305,16 @@
     "categories": [
       "Communications"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Helpers"
+        ]
+      }
+    },
     "icon": "fa:globe",
     "defaults": {
       "name": "Webhook Send",
@@ -2192,6 +2677,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:check-square",
     "defaults": {
       "name": "Pick",
@@ -2229,6 +2724,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:minus-square",
     "defaults": {
       "name": "Remove",
@@ -2266,6 +2771,16 @@
     "categories": [
       "Text"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:align-left",
     "defaults": {
       "name": "Text Trim 清理文本",
@@ -2308,6 +2823,16 @@
     "categories": [
       "Text"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:cut",
     "defaults": {
       "name": "Text",
@@ -2356,6 +2881,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:expand-arrows-alt",
     "defaults": {
       "name": "Flatten 展开嵌套字段",
@@ -2398,6 +2933,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:columns",
     "defaults": {
       "name": "Split",
@@ -2441,6 +2986,16 @@
     "categories": [
       "Data"
     ],
+    "codex": {
+      "categories": [
+        "Core Nodes"
+      ],
+      "subcategories": {
+        "Core Nodes": [
+          "Data Transformation"
+        ]
+      }
+    },
     "icon": "fa:tag",
     "defaults": {
       "name": "Add",
