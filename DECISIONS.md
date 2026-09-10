@@ -45,39 +45,52 @@
 - Cloudflare Workers 由 CSP 硬性禁用 `eval()` 和 `new Function`。n8n 的 Function 节点任意 JS 在 Workers 不可用。
 - 替代：`engine/evaluator.ts` 受限表达式求值器 + 预注册函数库，覆盖字段转换/条件/计算高频场景。
 
-## 3. 项目结构（最终版）
+## 3. 项目结构（最终版，含前端构建产物，与仓库一致）
 
 ```
 mini-flow/
-├── wrangler.jsonc            # Worker + D1 + KV + Workflows + Durable Object + cron
+├── wrangler.jsonc            # Worker + D1 + KV + Workflows + Durable Object + assets + cron
 ├── package.json / tsconfig.json
 ├── schema.sql                # D1 完整 Schema（含恢复扩展表 + DLQ + 索引）
 ├── DECISIONS.md              # 本文件
-├── frontend/                 # n8n editor-ui 静态 dist（复用，接入说明见 README）
+├── scripts/gen-nodes-json.ts # 同源生成 nodes.json / node-versions.json（前端节点元数据）
+├── frontend/                 # n8n editor-ui 静态 dist（复用，接入说明见 frontend/README.md）
 └── src/
-    ├── index.ts              # Hono 装配 + 静态托管 fallback + cron 入口
-    ├── types.ts              # 核心类型 + Env 绑定
+    ├── index.ts              # Hono 装配 + Push 挂载 + 静态托管 fallback + cron 入口
+    ├── types.ts              # 核心类型 + Env 绑定(DB/CREDENTIALS/PUSH/FLOW_ENGINE/ASSETS)
     ├── db/schema.ts          # 表结构与索引定义（对应 schema.sql）
     ├── engine/               # 韧性核心
     │   ├── evaluator.ts      # 受限表达式求值器（替代 Code 节点的 new Function）
     │   ├── retry.ts          # withRetry 指数退避
     │   ├── checkpoint.ts     # 检查点读写与恢复
     │   ├── lock.ts           # 乐观锁 + 超时清理
-    │   ├── dead-letter.ts    # DLQ 写入/扫描/重试
+    │   ├── dead-letter.ts    # DLQ 写入/扫描/重建恢复
     │   ├── dag.ts            # n8n workflow JSON → 步骤序列（含条件分支）
+    │   ├── scheduler.ts      # 已激活定时工作流调度
     │   └── executor.ts       # 业务调度主入口：锁→检查点→提交 Workflows
     ├── runtime/
-    │   ├── flow-engine.ts    # extends WorkflowEntrypoint：step 执行
+    │   ├── flow-engine.ts    # extends WorkflowEntrypoint：step 断点续跑
     │   └── push.ts           # Durable Object：SSE Push 门面
-    ├── nodes/                # 节点执行实现（按 engine 消费）
+    ├── nodes/                # 节点执行实现（真实可执行）
     │   ├── index.ts          # 节点注册表
-    │   ├── http-request.ts / set.ts / if-condition.ts / webhook.ts
+    │   ├── telegram.ts       # t.me 公开频道抓取
+    │   ├── messaging.ts      # 企业微信 webhook + 翻译
+    │   ├── http-request.ts / notify.ts / webhook.ts / if-condition.ts
+    │   ├── logic.ts / transform.ts / text.ts / util.ts / extra.ts
+    │   ├── ai.ts / db.ts / code-node.ts / triggers.ts / common.ts
+    ├── plugins/              # 插件化节点注册（元数据 + 执行器同源）
+    │   ├── builtin.ts        # n8n-nodes-base 全量节点定义
+    │   ├── registry.ts       # 插件注册中心
+    │   └── types.ts / index.ts
     └── n8n/                  # n8n REST 契约适配层
         ├── router.ts         # /rest/* 路由聚合
-        ├── settings.ts / auth.ts / users.ts
-        ├── node-types.ts     # nodeTypes 元数据
-        ├── workflows.ts      # workflows CRUD
-        ├── executions.ts     # executions 列表/详情 + run
+        ├── auth.ts / settings.ts / aux.ts / projects.ts
+        ├── node-types.ts     # nodeTypes 元数据（由 plugins 注册表输出）
+        ├── workflows.ts      # workflows CRUD + run
+        ├── executions.ts     # executions 列表/详情 + retry
+        ├── templates.ts / templates-presets.ts  # 模板市场代理 + 预设
+        ├── dead-letter.ts    # DLQ 管理端点
+        ├── console.ts        # 管理后台页
         └── push.ts           # 与 runtime/push 对接，订阅执行事件
 ```
 
