@@ -14,7 +14,7 @@
     "db:reset": "wrangler d1 execute mini-flow-db --file=schema.sql --local=false"
   },
   "dependencies": {
-    "hono": "^4.6.0"
+    "hono": "^4.13.7"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260907.1",

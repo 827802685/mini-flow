@@ -21,6 +21,9 @@ import { limitNode, renameKeysNode, zipNode, itemListsNode, storeNode, convertTo
 import { httpSendNode, notifyPlaceholderNode, webhookSendNode } from '../nodes/notify';
 import { telegramChannelNode } from '../nodes/telegram';
 import { weComSendNode, translateNode } from '../nodes/messaging';
+import {
+  keepFieldsNode, dropFieldsNode, textTrimNode, textSliceNode, flattenNode, splitToItemsNode, addMetaNode,
+} from '../nodes/extra';
 
 type Def = Omit<PluginNodeType, 'typeVersion' | 'version' | 'type'> & {
   type: string; typeVersion: number; version: number | number[];
@@ -208,6 +211,45 @@ const nodes: PluginNodeType[] = [
       { displayName: '文本字段', name: 'textField', type: 'string', default: 'text' },
     ],
     executor: translateNode }),
+
+  // ---- 扩展：字段裁剪 / 文本清洗 / 数据处理（全部真实可执行） ----
+  def({ type: 'n8n-nodes-base.keepFields', name: 'Pick Fields', displayName: 'Pick Fields 仅保留字段', description: '每条仅保留指定字段', group: ['transform'], categories: ['Data'], icon: 'fa:check-square', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '字段列表', name: 'fields', type: 'json', default: '["id","text","ts"]', description: 'JSON 数组：只保留这些字段' }],
+    executor: keepFieldsNode }),
+  def({ type: 'n8n-nodes-base.dropFields', name: 'Remove Fields', displayName: 'Remove Fields 删除字段', description: '删除指定字段，其余保留', group: ['transform'], categories: ['Data'], icon: 'fa:minus-square', inputs: ['main'], outputs: ['main'],
+    properties: [{ displayName: '字段列表', name: 'fields', type: 'json', default: '[]', description: 'JSON 数组：要删除的字段名' }],
+    executor: dropFieldsNode }),
+  def({ type: 'n8n-nodes-base.textTrim', name: 'Text Trim', displayName: 'Text Trim 清理文本', description: '清理首尾空白，可选压缩多余换行', group: ['transform'], categories: ['Text'], icon: 'fa:align-left', inputs: ['main'], outputs: ['main'],
+    properties: [
+      { displayName: '文本字段', name: 'field', type: 'string', default: 'text' },
+      { displayName: '压缩多余空白', name: 'collapseWhitespace', type: 'boolean', default: false },
+    ],
+    executor: textTrimNode }),
+  def({ type: 'n8n-nodes-base.textSlice', name: 'Text Slice', displayName: 'Text Slice 截取子串', description: '从指定位置截取一段文本', group: ['transform'], categories: ['Text'], icon: 'fa:cut', inputs: ['main'], outputs: ['main'],
+    properties: [
+      { displayName: '文本字段', name: 'field', type: 'string', default: 'text' },
+      { displayName: '起始位置', name: 'start', type: 'number', default: 0 },
+      { displayName: '截取长度(0=到末尾)', name: 'length', type: 'number', default: 0 },
+    ],
+    executor: textSliceNode }),
+  def({ type: 'n8n-nodes-base.flatten', name: 'Flatten', displayName: 'Flatten 展开嵌套字段', description: '把嵌套对象拍平为点分字段', group: ['transform'], categories: ['Data'], icon: 'fa:expand-arrows-alt', inputs: ['main'], outputs: ['main'],
+    properties: [
+      { displayName: '源字段(空=整条)', name: 'field', type: 'string', default: '' },
+      { displayName: '前缀', name: 'prefix', type: 'string', default: '' },
+    ],
+    executor: flattenNode }),
+  def({ type: 'n8n-nodes-base.splitToItems', name: 'Split To Items', displayName: 'Split To Items 拆成多行', description: '把长文本按分隔符拆成多条数据', group: ['transform'], categories: ['Data'], icon: 'fa:columns', inputs: ['main'], outputs: ['main'],
+    properties: [
+      { displayName: '文本字段', name: 'field', type: 'string', default: 'text' },
+      { displayName: '分隔符', name: 'separator', type: 'string', default: '\\n', description: '例如 \\n 换行、, 逗号' },
+    ],
+    executor: splitToItemsNode }),
+  def({ type: 'n8n-nodes-base.addMeta', name: 'Add Metadata', displayName: 'Add ID & Timestamp', description: '为每条附加唯一 id 与时间戳', group: ['transform'], categories: ['Data'], icon: 'fa:tag', inputs: ['main'], outputs: ['main'],
+    properties: [
+      { displayName: 'ID 字段名', name: 'idField', type: 'string', default: 'id' },
+      { displayName: '时间戳字段名', name: 'timeField', type: 'string', default: 'ts' },
+    ],
+    executor: addMetaNode }),
 ];
 
 export const builtinPlugin: NodePlugin = {
