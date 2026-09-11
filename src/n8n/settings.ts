@@ -14,19 +14,19 @@ async function getStoredSettings(env: Env): Promise<Record<string, unknown>> {
 }
 
 export const userRoutes = new Hono<{ Bindings: Env }>()
-  .get('/me', (c) => {
+  .get('/me', async (c) => {
     // 未登录 → 401，editor-ui 据此导向登录页
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     return c.json({ data: owner() });
   })
   // GET /rest/me/settings：返回已保存的用户偏好
   .get('/me/settings', async (c) => {
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     return c.json({ data: await getStoredSettings(c.env) });
   })
   // PATCH /rest/me/settings：合并写入用户偏好（前端保存流程会调用）
   .patch('/me/settings', async (c) => {
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const body = await c.req.json<Record<string, unknown>>().catch(() => ({}));
     const cur = await getStoredSettings(c.env);
     const merged = { ...cur, ...body };

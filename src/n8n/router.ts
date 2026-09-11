@@ -27,15 +27,26 @@ async function readSettings(c: Context): Promise<Record<string, unknown>> {
 // 均命中同一 handler（Hono 默认 strict:true 会区分尾部斜杠，导致 POST /projects/ 404）
 export const restApi = new Hono<{ Bindings: Env }>({ strict: false })
 
+// --- 全局鉴权墙（P0-3）：除公开端点外，/rest/* 一律要求合法会话，否则 401。
+// 公开白名单仅含登录/初始化/实例 meta；其余所有读写在未登录时一律拒绝。 ---
+const OPEN_PATHS = new Set<string>(['/login', '/owner/setup', '/meta']);
+restApi.use('*', async (c, next) => {
+  if (c.req.method === 'OPTIONS') return next();
+  const path = new URL(c.req.url).pathname.replace(/\/+$/, '');
+  if (OPEN_PATHS.has(path)) return next();
+  if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+  await next();
+});
+
 // 用户偏好设置：n8n 前端 settings.store 直接 PATCH /rest/me/settings（无 /user 段）。
 // 缺失时工作流保存报 "Problem saving workflow" 404，故在此根挂载。
 restApi
   .get('/me/settings', async (c) => {
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     return c.json({ data: await readSettings(c) });
   })
   .patch('/me/settings', async (c) => {
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const body = await c.req.json<Record<string, unknown>>().catch(() => ({}));
     const merged = { ...(await readSettings(c)), ...body };
     await (c.env.CREDENTIALS?.put(SETTINGS_KEY, JSON.stringify(merged))).catch(() => undefined);
@@ -67,7 +78,7 @@ const workflowDependencyRoutes = new Hono<{ Bindings: Env }>()
 // 模板导入/编辑器会 POST /rest/webhooks/find 检索匹配的既有 webhook 以便复用。
 // 本精简版无独立 webhook CRUD，返回空数组即可，避免 404。
 restApi.post('/webhooks/find', async (c) => {
-  if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+  if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
   return c.json({ data: [] });
 });
 

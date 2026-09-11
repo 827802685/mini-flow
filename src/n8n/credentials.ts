@@ -59,26 +59,30 @@ function credentialTypes() {
 }
 
 function toResponse(cred: StoredCredential) {
+  // P0-5 凭据脱敏：密钥明文永不出站。仅暴露字段名，值一律以占位符 "****" 遮蔽
+  // （与真实 n8n 一致：凭据类批量/详情返回带遮罩 data，前端据此渲染已填字段）。
+  const maskedData: Record<string, unknown> = {};
+  for (const k of Object.keys(cred.data ?? {})) maskedData[k] = '****';
   return {
-    id: cred.id, name: cred.name, type: cred.type, data: cred.data,
+    id: cred.id, name: cred.name, type: cred.type, data: maskedData,
     projectId: cred.projectId, scopes: ['credential:read', 'credential:update', 'credential:delete'],
     sharedWithProjects: [], createdAt: cred.createdAt, updatedAt: cred.updatedAt,
   };
 }
 
-const auth = (c: Context<{ Bindings: Env }>) => { if (!isAuthed(c)) return false; return true; };
+const auth = async (c: Context<{ Bindings: Env }>) => isAuthed(c);
 
 export const credentialTypesHandler = (c: Context<{ Bindings: Env }>) => c.json({ data: credentialTypes() });
 
 export const credentialRoutes = new Hono<{ Bindings: Env }>()
   // 列表
   .get('/', async (c) => {
-    if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     return c.json({ data: (await listCreds(c.env)).map(toResponse) });
   })
   // 创建
   .post('/', async (c) => {
-    if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const body = await c.req.json<Partial<StoredCredential>>().catch(() => ({} as Partial<StoredCredential>));
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -91,30 +95,30 @@ export const credentialRoutes = new Hono<{ Bindings: Env }>()
   })
   // schema（可空，编辑器按需读取）
   .get('/schema', async (c) => {
-    if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     return c.json({ data: null });
   })
   // 全局测试（新建表单内"Test"）
   .post('/test', async (c) => {
-    if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     return c.json({ data: { start: Date.now(), status: 'ok' } });
   })
   // 既有无关端点：/for-workflow、/types（编辑器初始化也会调用）
   .get('/for-workflow', async (c) => {
-    if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const projectId = c.req.query('projectId') ?? 'personal';
     return c.json({ data: (await listCreds(c.env)).filter((x) => x.projectId === null || x.projectId === projectId).map(toResponse) });
   })
-  .get('/types', async (c) => { if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401); return c.json({ data: credentialTypes() }); })
+  .get('/types', async (c) => { if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401); return c.json({ data: credentialTypes() }); })
   // 单个凭据
   .get('/:id', async (c) => {
-    if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const cred = (await listCreds(c.env)).find((x) => x.id === c.req.param('id'));
     if (!cred) return c.json({ code: 404, message: 'Credential not found', data: undefined }, 404);
     return c.json({ data: toResponse(cred) });
   })
   .patch('/:id', async (c) => {
-    if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const body = await c.req.json<Partial<StoredCredential>>().catch(() => ({} as Partial<StoredCredential>));
     const list = await listCreds(c.env); const idx = list.findIndex((x) => x.id === c.req.param('id'));
     if (idx < 0) return c.json({ code: 404, message: 'Credential not found', data: undefined }, 404);
@@ -125,11 +129,11 @@ export const credentialRoutes = new Hono<{ Bindings: Env }>()
   })
   // 连通性测试
   .post('/:id/test', async (c) => {
-    if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     return c.json({ data: { start: Date.now(), status: 'ok' } });
   })
   .delete('/:id', async (c) => {
-    if (!auth(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await auth(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const list = await listCreds(c.env); const next = list.filter((x) => x.id !== c.req.param('id'));
     await saveCreds(c.env, next);
     return c.json({ data: { success: true } });

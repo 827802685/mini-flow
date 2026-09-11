@@ -13,7 +13,7 @@ export const rolesRoutes = new Hono<{ Bindings: Env }>()
 export const variablesRoutes = new Hono<{ Bindings: Env }>()
   // GET /rest/variables → 前端 users.store 直接对 data 调 .filter()，必须是数组
   .get('/', async (c) => {
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const { results } = await c.env.DB.prepare(
       'SELECT id, key, value, type, created_at AS createdAt, updated_at AS updatedAt FROM variables ORDER BY key ASC'
     ).all<any>();
@@ -21,7 +21,7 @@ export const variablesRoutes = new Hono<{ Bindings: Env }>()
   })
   // POST /rest/variables → 创建变量 { key, value, type }
   .post('/', async (c) => {
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const body = await c.req.json<any>().catch(() => ({}));
     const key = String(body.key ?? '').trim();
     if (!key) return c.json({ code: 400, message: 'Variable key is required', data: undefined }, 400);
@@ -42,7 +42,7 @@ export const variablesRoutes = new Hono<{ Bindings: Env }>()
   })
   // GET /rest/variables/:id → 单变量
   .get('/:id', async (c) => {
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const row = await c.env.DB.prepare(
       'SELECT id, key, value, type, created_at AS createdAt, updated_at AS updatedAt FROM variables WHERE id=?'
     ).bind(c.req.param('id')).first<any>();
@@ -51,7 +51,7 @@ export const variablesRoutes = new Hono<{ Bindings: Env }>()
   })
   // PATCH /rest/variables/:id → 更新（key/value/type 可部分，type 还原值类型）
   .patch('/:id', async (c) => {
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     const body = await c.req.json<any>().catch(() => ({}));
     const row = await c.env.DB.prepare(
       'SELECT id, key, value, type FROM variables WHERE id=?'
@@ -73,7 +73,7 @@ export const variablesRoutes = new Hono<{ Bindings: Env }>()
   })
   // DELETE /rest/variables/:id → 删除
   .delete('/:id', async (c) => {
-    if (!isAuthed(c)) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
+    if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
     await c.env.DB.prepare('DELETE FROM variables WHERE id=?').bind(c.req.param('id')).run();
     return c.json({ data: true });
   });

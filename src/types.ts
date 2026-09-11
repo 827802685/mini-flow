@@ -81,6 +81,8 @@ export interface Env {
   FLOW_ENGINE: Workflow;
   PUSH: DurableObjectNamespace;
   ASSETS?: Fetcher; // Workers Static Assets（托管 n8n editor-ui dist）
+  SESSION_SECRET?: string; // 会话令牌签名密钥（生产用 Workers Secret）
+  ADMIN_PASSWORD?: string; // 登录密码（生产用 Workers Secret）
 }
 
 // Durable Object SSE 门面接口（供客户端调用）
