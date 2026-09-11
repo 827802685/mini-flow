@@ -11,6 +11,7 @@ export interface WorkflowRow {
   connections: string; // JSON string of N8nConnections
   settings: string | null;
   active: number;
+  archived: number | null;
   version_id: string | null;
   created_at: string;
   updated_at: string;
@@ -73,5 +74,6 @@ export function parseWorkflowRow(row: WorkflowRow): N8nWorkflow {
     connections: JSON.parse(row.connections),
     settings: row.settings ? JSON.parse(row.settings) : undefined,
     active: row.active === 1,
-  };
+    isArchived: row.archived === 1,
+  } as N8nWorkflow;
 }

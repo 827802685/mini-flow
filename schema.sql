@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS workflows (
   connections TEXT NOT NULL,         -- JSON: n8n connections 形态
   settings TEXT,                     -- JSON: 画布设置等
   active INTEGER NOT NULL DEFAULT 0,
+  archived INTEGER NOT NULL DEFAULT 0,
   version_id TEXT,
   project_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
