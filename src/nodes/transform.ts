@@ -15,8 +15,9 @@ function num(v: unknown): number {
   return isNaN(n) ? 0 : n;
 }
 
-// ---- Filter：按 expression 求值保留为 true 的项 ----
-// n8n filter params.conditions.conditions[{operator,leftValue,rightValue}] 或 expression
+// ---- Filter：按条件保留为 true 的项 ----
+// n8n filter params.conditions.conditions[{operator,leftValue,rightValue}] 或 expression；
+// 组合方式取 options.combinator = and(默认) / or。
 export const filterNode = {
   async execute(ctx: NodeExecutionContext): Promise<NodeOutput> {
     const p = ctx.node.parameters ?? {};
@@ -25,16 +26,29 @@ export const filterNode = {
     if (!Array.isArray(conditions) || conditions.length === 0) {
       return { main: items };
     }
+    const combinator = String(p.options?.combinator ?? p.combinator ?? 'and').toLowerCase();
+    const or = combinator === 'or';
     const out = items.filter((it) => {
       const j = it.json ?? {};
+      let matchedAny = false;
       for (const c of conditions) {
-        if (c.expression) return isTruthy(evalExprOf(c.expression, j));
-        const op = c.operator ?? 'equal';
+        if (c == null) continue;
+        // 表达式条件：直接求值
+        if (c.expression != null) {
+          const pass = isTruthy(evalExprOf(c.expression, j));
+          if (or) { if (pass) return true; matchedAny = matchedAny || pass; }
+          else if (!pass) return false;
+          continue;
+        }
+        // 操作符兼容 n8n 新版 {operation:'equals'} 与旧版字符串 'equals'
+        const op = (c.operator && typeof c.operator === 'object') ? (c.operator.operation ?? 'equal') : (c.operator ?? 'equal');
         const left = keepVal(c.leftValue, j);
         const right = keepVal(c.rightValue, j);
-        if (!filterCompare(left, op, right)) return false;
+        const pass = filterCompare(left, op, right);
+        if (or) { if (pass) return true; matchedAny = matchedAny || pass; }
+        else if (!pass) return false;
       }
-      return true;
+      return or ? matchedAny : true;
     });
     return { main: out };
   },
@@ -294,6 +308,7 @@ function filterCompare(left: unknown, op: string, right: unknown): boolean {
     case 'lte': case '<=': return bothNum ? ln <= rn : (L as any) <= (R as any);
     case 'contains': case 'includes': return String(L).includes(String(R));
     case 'notContains': return !String(L).includes(String(R));
+    case 'regexMatch': { try { return new RegExp(String(R)).test(String(L)); } catch { return false; } }
     case 'startsWith': return String(L).startsWith(String(R));
     case 'endsWith': return String(L).endsWith(String(R));
     case 'exists': case 'isNotEmpty': return L != null && L !== '';

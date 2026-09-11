@@ -2,20 +2,25 @@
 import type { NodeExecutionContext } from '../types';
 import { safeEvaluate } from '../engine/evaluator';
 
-// ---- Set：写入字段 ----
+// ---- Set：写入字段（对全部输入项生效，兼容 n8n 参数形态） ----
 export const setNode = {
   async execute(ctx: NodeExecutionContext) {
     const p = ctx.node.parameters;
-    const item = { ...(ctx.inputData?.main?.[0]?.json ?? {}) };
-
-    if (p.assignments) {
-      for (const a of p.assignments.assignments ?? []) {
-        item[String(a.name)] = interpKeepType(a.value, ctx.inputData?.main?.[0]?.json ?? {});
+    const items = ctx.inputData?.main ?? [];
+    // n8n Set 对每个输入项各写一份；无输入项时产出空项保持端点非空。
+    const sources = items.length ? items : [{ json: {} }];
+    const out = sources.map((it) => {
+      const item = { ...(it.json ?? {}) };
+      if (p.assignments) {
+        for (const a of p.assignments.assignments ?? []) {
+          item[String(a.name)] = interpKeepType(a.value, it.json ?? {});
+        }
+      } else if (p.name !== undefined) {
+        item[String(p.name)] = interpKeepType(p.value, item);
       }
-    } else if (p.name !== undefined) {
-      item[String(p.name)] = interpKeepType(p.value, item);
-    }
-    return { main: [{ json: item }] };
+      return { json: item };
+    });
+    return { main: out };
   },
 };
 

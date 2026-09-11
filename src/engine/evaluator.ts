@@ -143,8 +143,7 @@ class Parser {
     while (this.isOp('+', '-')) {
       const op = this.next().value;
       const r = this.multiplicative();
-      if (op === '+') l = String(l) + String(r); // 字符串拼接兼容
-      else l = Number(l) - Number(r);
+      l = applyAdditive(op, l, r);
     }
     return l;
   }
@@ -231,6 +230,15 @@ function getNested(base: unknown, parts: string[]): unknown {
 function looseEq(a: unknown, b: unknown): boolean {
   if (typeof a === 'number' && typeof b === 'string' && b !== '' && !isNaN(Number(b))) return a === Number(b);
   return String(a) === String(b);
+}
+
+// 真 JS 语义（修复 1+1="11"）：number+number 数值相加；任一操作数为字符串则拼接；
+// 其余(null/boolean 等)与减法一致走数值运算，符合 JS ToPrimitive 回落。
+function applyAdditive(op: string, l: unknown, r: unknown): unknown {
+  if (op === '-') return Number(l) - Number(r);
+  if (typeof l === 'number' && typeof r === 'number') return l + r;
+  if (typeof l === 'string' || typeof r === 'string') return String(l) + String(r);
+  return Number(l) + Number(r);
 }
 
 // ---------- 内置函数库（白名单，禁止任意代码） ----------

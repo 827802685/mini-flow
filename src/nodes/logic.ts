@@ -67,11 +67,25 @@ export const respondToWebhookNode = {
 // ---- Switch：按规则把输入项路由到命中的分支(s)。 ----
 // 引擎采用线性执行模型（单一 main 输出），故把命中任意启用分支的项合并进 main；
 // 额外按分支 index 写入 main_branch{N}，便于后续按分支读取。
-// n8n switch 参数形态：parameters.rules.values[]，每条 { conditions: { conditions:[ {operator:{operation}, leftValue, rightValue} ] } }。
+// n8n switch 参数形态：parameters.rules.values[]，每条 { conditions: { conditions:[ {operator:{operation}, leftValue, rightValue} ] } }；
+// 表达式模式：parameters.expression（goToSequential / raw expression）单条真值路由。
 export const switchNode = {
   async execute(ctx: NodeExecutionContext): Promise<NodeOutput> {
     const p = ctx.node.parameters;
     const items = ctx.inputData?.main ?? [];
+
+    // 表达式模式：单条真值表达式决定是否命中
+    const expr = p.expression ?? p.rawExpression;
+    const isExprMode = !!expr || (p.mode && String(p.mode).toLowerCase().includes('express'));
+    if (isExprMode && expr) {
+      const out: NodeOutput = { main: [] };
+      for (const item of items) {
+        const ev = safeEvaluate(String(expr), { json: item.json ?? {} });
+        if (ev.ok && Boolean(ev.value)) out.main.push(item);
+      }
+      return out;
+    }
+
     const groups = p.rules?.values ?? (Array.isArray(p.rules) ? p.rules : []);
     if (!Array.isArray(groups) || groups.length === 0) {
       return { main: items };
@@ -81,11 +95,12 @@ export const switchNode = {
       const j = item.json ?? {};
       let matchedIdx = -1;
       for (let g = 0; g < groups.length; g++) {
-        const conds = (groups[g]?.conditions?.conditions as any[]) ?? [];
+        const group = groups[g] ?? {};
+        const conds = (group.conditions?.conditions ?? group.conditions ?? group.rules ?? []) as any[];
         let ok = conds.length > 0;
         for (const c of conds) {
           if (c == null) { ok = false; break; }
-          const op = (c.operator as any)?.operation ?? (c.operator as any);
+          const op = (c.operator as any)?.operation ?? (c.operator as any) ?? c.operation ?? 'equals';
           const left = keepType(c.leftValue, j);
           const right = keepType(c.rightValue, j);
           if (!compare(left, op, right)) { ok = false; break; }
