@@ -3,6 +3,7 @@
   // 生产承载 n8n.zjkl.dpdns.org 的 worker 名为 mini-flow（账户 ID=de9cc5...，勿混用）。
   // 用账户 ID 作 worker 名会导致 DO 命名空间前缀与账户冲突(code 10065)。
   "name": "mini-flow",
+  "account_id": "de9cc5da9705c7edf34e7e4e0ac9e360",
   "main": "src/index.ts",
   "compatibility_date": "2026-04-12",
   "compatibility_flags": ["nodejs_compat"],

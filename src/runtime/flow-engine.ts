@@ -56,7 +56,11 @@ export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
       input: base.input ?? raw.input ?? {},
       completedNodes: base.completedNodes ?? raw.completedNodes ?? [],
     };
-    const emit: (e: PushEvent) => void = (e) => { void sendPush(env, e); };
+    // emit: 把 push 事件可靠投递到 DO。Workflows 环境中 fire-and-forget 的异步
+    // fetch 可能在 isolate 被回收前未完成而丢失，故收集所有待发 promise，
+    // 在 run 的 finally 中统一 await（sendPush 自身带 try/catch，不影响主流程）。
+    const flush: Promise<void>[] = [];
+    const emit: (e: PushEvent) => void = (e) => { flush.push(sendPush(env, e)); };
 
     emit({ type: 'executionStarted', executionId: p.executionId });
 
@@ -105,47 +109,59 @@ export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
             nodeName: node.name, nodeType: node.type, nodeParameters: node.parameters,
             lastInputData: p.input, lastError: `未实现节点类型: ${node.type}`,
           });
-          await checkpoint.markPaused(env, p.executionId, `未实现节点类型: ${node.type}`);
+          // P1-4: 未实现节点同样显式标 failed + 节点级 error（前端标红），不再静默。
+          await checkpoint.markFailed(env, p.executionId, `未实现节点类型: ${node.type}`);
+          emit({ type: 'nodeExecuteError', executionId: p.executionId, nodeName: node.name, error: `未实现节点: ${node.type}` });
           emit({ type: 'executionFailed', executionId: p.executionId, error: `未实现节点: ${node.type}` });
           return { executionId: p.executionId, data: {}, lastNodeExecuted: node.name };
         }
 
-        // 底线2: 用 withRetry 包裹（step.do 幂等，保证重放不重复副作用）
-        let output: NodeOutput = { main: [] };
-        let lastErr: unknown = null;
-        try {
-          output = await step.do(
-            `exec:${node.name}`,
-            () => withRetry(() => this.runNode(node, executor, inputData, env, p, emit), {
-              maxAttempts: 3, baseDelayMs: 500, maxDelayMs: 8000,
-            }, (att, err) => {
-              // 记录重试
-              void checkpoint.logNodeExecution(env, {
-                executionId: p.executionId, nodeName: node.name, nodeType: node.type,
-                status: 'failed', retryAttempt: att, errorMessage: err instanceof Error ? err.message : String(err),
+        // 底线2+3: 用 withRetry 包裹节点执行，并在 step.do 内完成全部重试。
+        // 关键（P1-4 修复）：节点失败绝不能从 step.do 逃逸抛异常 —— 否则 Cloudflare Workflows
+        // 会对该 step 自动无限重放，导致 failed 日志无限累积、执行永久卡在 running。
+        // 故把"重试耗尽后的失败"编码为 step.do 的返回值，由主流程统一标记终态并终止。
+        let outcome: { ok: true; output: NodeOutput } | { ok: false; error: string };
+        outcome = await step.do(
+          `exec:${node.name}`,
+          async () => {
+            try {
+              const output = await withRetry(() => this.runNode(node, executor, inputData, env, p, emit), {
+                maxAttempts: 3, baseDelayMs: 500, maxDelayMs: 8000,
+              }, (att, err) => {
+                // 记录重试（每次 attempt 失败
+                void checkpoint.logNodeExecution(env, {
+                  executionId: p.executionId, nodeName: node.name, nodeType: node.type,
+                  status: 'failed', retryAttempt: att, errorMessage: err instanceof Error ? err.message : String(err),
+                });
+                emit({ type: 'nodeExecuteBefore', executionId: p.executionId, nodeName: node.name });
               });
-              emit({ type: 'nodeExecuteBefore', executionId: p.executionId, nodeName: node.name });
-            }),
-          );
-        } catch (e) {
-          lastErr = e;
-        }
+              return { ok: true, output } as const;
+            } catch (e) {
+              return { ok: false, error: e instanceof Error ? e.message : String(e) } as const;
+            }
+          },
+        );
 
-        if (lastErr) {
-          // 底线3: 重试耗尽 → 投入死信队列 → paused，保留检查点
-          const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+        if (!outcome.ok) {
+          // 底线3: 重试耗尽 → 投入死信队列 → failed（并已写检查点）。
+          // P1-4: 节点抛错必须显式暴露 —— 推节点级 error（前端标红）+ 执行终态标 failed(error)，
+          // 而不再把执行吞成 paused/静态 success。检查点保留，供死信补偿续跑。
+          const msg = outcome.error;
           await enqueueDeadLetter(env, {
             executionId: p.executionId, workflowId: p.workflowId,
             nodeName: node.name, nodeType: node.type, nodeParameters: node.parameters,
             lastInputData: inputData, lastError: msg,
           });
-          await checkpoint.markPaused(env, p.executionId, `节点 ${node.name} 失败: ${msg}`);
+          await checkpoint.markFailed(env, p.executionId, `节点 ${node.name} 失败: ${msg}`);
           await checkpoint.logNodeExecution(env, {
             executionId: p.executionId, nodeName: node.name, nodeType: node.type, status: 'failed', errorMessage: msg,
           });
+          emit({ type: 'nodeExecuteError', executionId: p.executionId, nodeName: node.name, error: msg });
           emit({ type: 'executionFailed', executionId: p.executionId, error: msg });
           return { executionId: p.executionId, data: {}, lastNodeExecuted: node.name, error: { message: msg } };
         }
+
+        const output = outcome.output;
 
         // 成功记录：登记输出 + 各活跃输出分支
         completed.add(node.name);
@@ -179,6 +195,8 @@ export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
     } finally {
       // 释放锁（正常/失败都释放）
       await this.release(env, p.executionId).catch(() => {});
+      // 可靠投递所有已 emit 的 push 事件（Workflows 中避免异步丢失）
+      await Promise.all(flush).catch(() => {});
     }
   }
 

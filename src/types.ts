@@ -71,6 +71,8 @@ export type PushEvent =
   | { type: 'executionWaiting'; executionId: string }
   | { type: 'nodeExecuteBefore'; executionId: string; nodeName: string }
   | { type: 'nodeExecuteAfter'; executionId: string; nodeName: string }
+  // P1-4 可观测：节点执行抛错 → 前端据此将该节点标红（不再静默 success）
+  | { type: 'nodeExecuteError'; executionId: string; nodeName: string; error: string }
   | { type: 'executionFinished'; executionId: string; data: RunExecutionResult }
   | { type: 'executionFailed'; executionId: string; error: string };
 

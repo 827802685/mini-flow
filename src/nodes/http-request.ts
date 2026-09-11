@@ -22,15 +22,30 @@ export const httpRequestNode = {
 
     const body = p.sendBody === true || (p.method && p.method !== 'GET') ? JSON.stringify(fillBody(p, item)) : undefined;
 
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: ['GET', 'HEAD'].includes(method.toUpperCase()) ? undefined : body,
-    });
+    // P1-5: 网络层错误必须显式抛错（DNS 失败/连接被拒/超时），
+    // 而不是吞掉后返回伪造的成功 —— 否则流程明明失败却显示 success。
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: ['GET', 'HEAD'].includes(method.toUpperCase()) ? undefined : body,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`HTTP 请求失败: ${method} ${url} → ${msg}`);
+    }
 
     const text = await res.text();
     let parsed: unknown = text;
     try { parsed = JSON.parse(text); } catch { /* keep text */ }
+
+    // P1-6: 非 2xx 状态码可配置抛错（n8n HTTP Request "Always Fail On Error" 语义）。
+    // 通过节点参数 options.alwaysFailOnError 显式开启；默认保持兼容（返回响应供用户自行判断）。
+    const alwaysFail = p.options?.alwaysFailOnError === true || p.alwaysFailOnError === true;
+    if (alwaysFail && !res.ok) {
+      throw new Error(`HTTP ${res.status} ${res.statusText || ''}${text ? `: ${text.slice(0, 400)}` : ''}`);
+    }
 
     // n8n 兼容输出：响应体字段合入顶层 $json（$json.args.x 可直接取），
     // 并附加 statusCode/headers/body/json；body 与 json 均指向解析后的响应体。

@@ -13,17 +13,20 @@ interface Subscriber {
 export class PushConnection extends DurableObject<Env> {
   private subscribers = new Map<string, Subscriber>();
 
-  // HTTP 端点：GET /push 建立 SSE 流；由 Worker 路由转发至本 DO（经 get idFromName）
+  // HTTP 端点：GET /push 建立 SSE 流（前端订阅）；POST /push 投递事件（引擎内 sendPush）。
+  // 关键：必须先按 method 分流，否则 POST 路径以 /push 结尾会被当成 SSE 订阅，
+  // 导致 broadcast 永不执行、前端收不到任何执行事件。
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname.endsWith('/push')) {
-      return this.openSse();
-    }
-    // POST 事件投递（Worker 内部调用 runtime 用）
+    // POST 事件投递（Worker 内部 sendPush 用）—— 必须优先于 SSE 订阅判断
     if (request.method === 'POST') {
       const body = (await request.json()) as PushEvent;
       this.broadcast(body);
       return new Response('ok');
+    }
+    // 其余为 SSE 订阅端点（GET /push）
+    if (url.pathname.endsWith('/push')) {
+      return this.openSse();
     }
     return new Response('not found', { status: 404 });
   }
