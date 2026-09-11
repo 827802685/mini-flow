@@ -6,6 +6,7 @@ import { withRetry } from '../engine/retry';
 import { parseWorkflowRow, type WorkflowRow } from '../db/schema';
 import { startExecution } from '../engine/executor';
 import { sendPush } from './push';
+import { OWNER_SCOPES } from './auth';
 
 export const workflowRoutes = new Hono<{ Bindings: Env }>()
   .get('/', async (c) => {
@@ -47,6 +48,11 @@ export const workflowRoutes = new Hono<{ Bindings: Env }>()
     const row = await withRetry(() => c.env.DB.prepare('SELECT id FROM workflows WHERE id=?').bind(id).first<WorkflowRow>());
     return c.json({ data: !!row });
   })
+  // 协作写锁查询：collaboration.store 打开工作流时调用 z()=GET /workflows/:id/collaboration/write-lock，
+  // 返回值被赋值给"当前写者"E；若返回非空且无 clientId 的对象（此前未实现该路由→SPA 兜底返回 HTML），
+  // 则 shouldBeReadOnly=(E≠null)&&!(E.clientId===pushRef)=true，导致整块画布只读、所有编辑操作置灰。
+  // 无人持有写锁时应返回 null（→ E 保持 null → 可编辑）。
+  .get('/:id/collaboration/write-lock', async (c) => c.json({ data: null }))
   .get('/:id', async (c) => withWorkflow(c.env, c.req.param('id'), async (wf) => c.json({ data: await toResponse(wf) }), () => missingWorkflow(c.req.param('id'))))
   // PUT /:id：n8n 编辑器保存更新工作流常发 PUT（部分 Flow 走 PATCH）。语义与 PATCH 一致，做全量更新。
   .put('/:id', async (c) => updateWorkflowHandler(c, c.req.param('id')))
@@ -213,6 +219,9 @@ async function toResponse(wf: any) {
     isArchived: !!(wf as any).isArchived,
     versionId: wf.id,
     checksum: await computeChecksum(wf),
+    // 前端按 workflow.scopes 判定该工作流的 workflowPermissions.update 等；
+    // 单用户=owner 场景直接返回 owner 权限，否则节点编辑操作会被视作不可编辑而置灰。
+    scopes: OWNER_SCOPES,
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), tags: [],
   };
 }

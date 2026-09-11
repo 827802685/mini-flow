@@ -9,6 +9,22 @@ const OWNER_EMAIL = 'admin@example.com';
 export const COOKIE_NAME = 'n8n-auth';
 const SECRET = 'mini-flow-demo-secret';
 
+// 单用户=owner 的全局权限：既有 globalScopes 也有顶层 scopes，
+// 关键在 owner 返回时同时给出，前端 currentUser.scopes / workflow.scopes 据此判定 workflowPermissions.update 等。
+// 缺任一都会让节点编辑操作（删除/替换/停用/固定/执行步骤）被判定为不可编辑而置灰。
+export const OWNER_SCOPES: string[] = [
+  'global:owner',
+  'user:read', 'user:update', 'user:invite', 'user:list', 'user:delete',
+  'workflow:create', 'workflow:read', 'workflow:update', 'workflow:delete',
+  'workflow:list', 'workflow:move', 'workflow:execute', 'workflow:share', 'workflow:activate',
+  'credential:create', 'credential:read', 'credential:update', 'credential:delete', 'credential:list', 'credential:share',
+  'project:create', 'project:read', 'project:update', 'project:delete', 'project:list',
+  'folder:create', 'folder:read', 'folder:update', 'folder:delete',
+  'insights:list', 'auditLogs:manage',
+  'variables:create', 'variables:read', 'variables:update', 'variables:delete',
+  'variable:create', 'variable:read', 'variable:update', 'variable:delete', 'variable:share', 'variable:list',
+];
+
 // cookie 有效期：30 天，同设备二次访问不再弹出登录验证
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
@@ -22,18 +38,10 @@ export function owner() {
   return {
     id: 'owner', email: OWNER_EMAIL, firstName: 'Admin', lastName: '',
     role: 'owner', isOwner: true, isPending: false,
-    globalScopes: [
-      'global:owner',
-      'user:read', 'user:update', 'user:invite', 'user:list', 'user:delete',
-      'workflow:create', 'workflow:read', 'workflow:update', 'workflow:delete',
-      'workflow:list', 'workflow:move', 'workflow:execute', 'workflow:share', 'workflow:activate',
-      'credential:create', 'credential:read', 'credential:update', 'credential:delete', 'credential:list', 'credential:share',
-      'project:create', 'project:read', 'project:update', 'project:delete', 'project:list',
-      'folder:create', 'folder:read', 'folder:update', 'folder:delete',
-      'insights:list', 'auditLogs:manage',
-      'variables:create', 'variables:read', 'variables:update', 'variables:delete',
-      'variable:create', 'variable:read', 'variable:update', 'variable:delete', 'variable:share', 'variable:list',
-    ],
+    globalScopes: OWNER_SCOPES,
+    // 前端(currentUser.scopes)用它计算 workflowPermissions.update 等：
+    //   节点右键/三点菜单里"删除/替换/停用/固定/执行步骤"是否可点，均取决于此。
+    scopes: OWNER_SCOPES,
     features: {
       usersCreate: true, usersRead: true, usersUpdate: true,
       smtp: {}, users: {},
