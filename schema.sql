@@ -72,6 +72,16 @@ CREATE TABLE IF NOT EXISTS dead_letter_queue (
   FOREIGN KEY (execution_id) REFERENCES executions(id)
 );
 
+-- 实例变量（Variables）：跨工作流复用的键值对（$vars.MY_VAR）
+CREATE TABLE IF NOT EXISTS variables (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  key TEXT NOT NULL UNIQUE,
+  value TEXT,                      -- JSON 编码的值
+  type TEXT NOT NULL DEFAULT 'string',  -- string | number | boolean | object | array | null
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- 项目（Projects / teams）：单机. 预留团队项目
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,

@@ -30,7 +30,9 @@ export function owner() {
       'credential:create', 'credential:read', 'credential:update', 'credential:delete', 'credential:list', 'credential:share',
       'project:create', 'project:read', 'project:update', 'project:delete', 'project:list',
       'folder:create', 'folder:read', 'folder:update', 'folder:delete',
-      'insights:list', 'auditLogs:manage', 'variables:create', 'variables:read', 'variables:update', 'variables:delete',
+      'insights:list', 'auditLogs:manage',
+      'variables:create', 'variables:read', 'variables:update', 'variables:delete',
+      'variable:create', 'variable:read', 'variable:update', 'variable:delete', 'variable:share', 'variable:list',
     ],
     features: {
       usersCreate: true, usersRead: true, usersUpdate: true,
