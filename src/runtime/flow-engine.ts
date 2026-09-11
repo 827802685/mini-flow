@@ -25,6 +25,7 @@ export interface FlowPayload {
 
 // 单节点输出：n8n 数据形态 { main: Array<{json}> }
 type NodeOutput = Record<string, Array<{ json: any }>>;
+type Item = { json: any };
 
 export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
   async run(event: WorkflowEvent<FlowPayload>, step: WorkflowStep) {
@@ -61,15 +62,32 @@ export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
 
     // 编译 DAG（拓扑序 + 条件分支边）
     const graph = compileWorkflow({ name: p.workflowName, nodes: p.nodes, connections: p.connections });
-    // 节点名字 → 该节点产生的结果（作为下游输入）
+    // 节点名字 → 该节点产生的结果（原始输出，写检查点用）
     const nodeResults = new Map<string, NodeOutput>();
+    // 每个节点已流转到下游的输出分支 → 实际 items（仅含 length>0 的分支；分支路由据此定向）
+    const producedBranches = new Map<string, Map<number, Item[]>>();
     // 完成集合（来自 payload 断点恢复 + 本次运行累积）
     const completed = new Set<string>(p.completedNodes ?? []);
+    let lastExecuted: string | undefined;
 
     try {
+      // P1-1: 仅执行从入口可达的节点（断开/孤立子图不跑）
+      const reachable = computeReachable(graph);
+
       for (const s of graph.steps) {
         const node = s.node;
-        if (completed.has(node.name)) continue; // 断点跳过
+        if (!reachable.has(node.name)) continue; // 不可达(孤立子图) → 不执行
+        if (completed.has(node.name)) continue;  // 断点跳过
+
+        // 分支路由：收集所有已流转到的入边数据（仅含活跃输出分支）
+        const incoming = collectIncoming(graph, node, producedBranches);
+        const isEntry = graph.entry?.name === node.name;
+        // P1-2: 非入口且无任何活跃入边数据 → 该分支未命中，节点不执行
+        if (!isEntry && incoming.length === 0) continue;
+
+        const inputData: NodeOutput = incoming.length > 0
+          ? { main: incoming }
+          : { main: [{ json: (p.input ?? {}) as any }] };
 
         // 底线1: 执行前记录 running + currentNode
         emit({ type: 'nodeExecuteBefore', executionId: p.executionId, nodeName: node.name });
@@ -91,9 +109,6 @@ export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
           emit({ type: 'executionFailed', executionId: p.executionId, error: `未实现节点: ${node.type}` });
           return { executionId: p.executionId, data: {}, lastNodeExecuted: node.name };
         }
-
-        // 组装该节点的输入：有条件分支时按分支取上游对应输出
-        const inputData = buildInputFor(graph, node, nodeResults, p.input);
 
         // 底线2: 用 withRetry 包裹（step.do 幂等，保证重放不重复副作用）
         let output: NodeOutput = { main: [] };
@@ -132,9 +147,11 @@ export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
           return { executionId: p.executionId, data: {}, lastNodeExecuted: node.name, error: { message: msg } };
         }
 
-        // 成功记录
+        // 成功记录：登记输出 + 各活跃输出分支
         completed.add(node.name);
         nodeResults.set(node.name, output);
+        producedBranches.set(node.name, branchOutputs(node.type, output));
+        lastExecuted = node.name;
         await checkpoint.logNodeExecution(env, {
           executionId: p.executionId, nodeName: node.name, nodeType: node.type, status: 'completed', outputData: output,
         }).catch(() => {});
@@ -151,7 +168,7 @@ export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
       // 全部完成
       const allOutput = Object.fromEntries(nodeResults) as any;
       await checkpoint.markCompleted(env, p.executionId, { name: p.workflowName } as any, allOutput).catch(() => {});
-      const result: RunExecutionResult = { executionId: p.executionId, data: allOutput, lastNodeExecuted: graph.steps.at(-1)?.node.name };
+      const result: RunExecutionResult = { executionId: p.executionId, data: allOutput, lastNodeExecuted: lastExecuted };
       emit({ type: 'executionFinished', executionId: p.executionId, data: result });
       return result;
     } catch (e) {
@@ -182,22 +199,55 @@ export class FlowEngine extends WorkflowEntrypoint<Env, FlowPayload> {
   }
 }
 
-// 为节点构造输入：取所有指向该节点的上游（含条件分支），合并其输出
-function buildInputFor(graph: { edges: Map<string, any[]> }, node: N8nNode, nodeResults: Map<string, NodeOutput>, initial: unknown): NodeOutput {
-  const upstreams: string[] = [];
-  for (const [from, list] of graph.edges) {
-    for (const e of list) {
-      if (e.to === node.name) upstreams.push(from);
+// 从入口可达节点集（忽略分支活跃性，仅按图连通性）
+function computeReachable(graph: { edges: Map<string, any[]>; entry: { name: string } | null }): Set<string> {
+  const reach = new Set<string>();
+  const entry = graph.entry?.name;
+  if (!entry) return reach;
+  const queue = [entry];
+  reach.add(entry);
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const e of graph.edges.get(cur) ?? []) {
+      if (!reach.has(e.to)) { reach.add(e.to); queue.push(e.to); }
     }
   }
-  if (upstreams.length === 0) {
-    return { main: [{ json: (initial ?? {}) as any }] };
+  return reach;
+}
+
+// 收集流向 node 的所有活跃入边数据（仅当上游对了应分支确实产出了 items）
+function collectIncoming(graph: { edges: Map<string, any[]> }, node: { name: string }, produced: Map<string, Map<number, Item[]>>): Item[] {
+  const items: Item[] = [];
+  for (const [from, list] of graph.edges) {
+    for (const e of list) {
+      if (e.to !== node.name) continue;
+      const arr = produced.get(from)?.get(e.branch);
+      if (arr && arr.length) items.push(...arr);
+    }
   }
-  const items: Array<{ json: any }> = [];
-  for (const up of upstreams) {
-    const out = nodeResults.get(up);
-    if (out?.main) items.push(...out.main);
+  return items;
+}
+
+// 把一个节点的执行结果归一化为「输出分支 → items」。
+//  IF  ：branch=true→main[0](index0)，branch=false→main[1](index1)
+//  Switch/多分支：按 main_N 键取活跃分支
+//  单输出节点：非空 main → index0
+function branchOutputs(nodeType: string, out: unknown): Map<number, Item[]> {
+  const map = new Map<number, Item[]>();
+  if (!out || typeof out !== 'object') return map;
+  const o = out as Record<string, any>;
+  // IF：用 branch 布尔决定 0/1
+  if ('branch' in o) {
+    const idx = o.branch === true ? 0 : (o.branch === false ? 1 : -1);
+    if (idx >= 0 && Array.isArray(o.main) && o.main.length) map.set(idx, o.main);
+    return map;
   }
-  if (items.length === 0) items.push({ json: (initial ?? {}) as any });
-  return { main: items };
+  // Switch / 多分支：main_N 键为命中分支
+  let hasExplicit = false;
+  for (const k of Object.keys(o)) {
+    const m = /^main_(\d+)$/.exec(k);
+    if (m && Array.isArray(o[k]) && o[k].length) { map.set(Number(m[1]), o[k]); hasExplicit = true; }
+  }
+  if (!hasExplicit && Array.isArray(o.main) && o.main.length) map.set(0, o.main);
+  return map;
 }

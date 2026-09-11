@@ -44,6 +44,14 @@ export function compileWorkflow(workflow: N8nWorkflow): DagGraph {
     }
   }
 
+  // 入口节点：入度 0 的第一个节点（须在 Kahn 变异 inDegree 之前计算，否则不可靠）
+  let entryNode: N8nNode | null = null;
+  for (const n of nodes) {
+    if ((inDegree.get(n.name) ?? 0) === 0) {
+      entryNode = n; break;
+    }
+  }
+
   // Kahn 拓扑排序（稳定顺序：按原数组顺序出队）
   const queue = nodes.filter((n) => (inDegree.get(n.name) ?? 0) === 0);
   const steps: Step[] = [];
@@ -61,14 +69,6 @@ export function compileWorkflow(workflow: N8nWorkflow): DagGraph {
         const t = nodes.find((n) => n.name === e.to);
         if (t) queue.push(t);
       }
-    }
-  }
-
-  // 入口节点：入度 0 的第一个节点
-  let entryNode: N8nNode | null = null;
-  for (const n of nodes) {
-    if ((inDegree.get(n.name) ?? 0) === 0) {
-      entryNode = n; break;
     }
   }
 
