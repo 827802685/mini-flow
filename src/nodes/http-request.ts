@@ -32,8 +32,21 @@ export const httpRequestNode = {
     let parsed: unknown = text;
     try { parsed = JSON.parse(text); } catch { /* keep text */ }
 
+    // n8n 兼容输出：响应体字段合入顶层 $json（$json.args.x 可直接取），
+    // 并附加 statusCode/headers/body/json；body 与 json 均指向解析后的响应体。
+    const base = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? { ...(parsed as Record<string, unknown>) }
+      : {};
     return {
-      main: [{ json: { statusCode: res.status, body: parsed, json: parsed, headers: Object.fromEntries(res.headers.entries()) } }],
+      main: [{
+        json: {
+          ...base,
+          statusCode: res.status,
+          body: parsed,
+          json: parsed,
+          headers: Object.fromEntries(res.headers.entries()),
+        },
+      }],
     };
   },
 };
