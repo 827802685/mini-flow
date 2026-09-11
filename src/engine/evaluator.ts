@@ -169,7 +169,7 @@ class Parser {
       case 'string': return t.value;
       case 'ident':
         if (this.peek()?.type === 'lparen') return this.call(t.value);
-        return this.lookup(t.value);
+        return this.primaryIdent(t.value);
       case 'lparen': { const v = this.ternary(); this.expect('rparen'); return v; }
       case 'lbracket': { const arr: unknown[] = []; if (this.peek()?.type !== 'rbracket') { arr.push(this.ternary()); while (this.peek()?.type === 'comma') { this.next(); arr.push(this.ternary()); } } this.expect('rbracket'); return arr; }
       case 'lbrace': { const obj: Record<string, unknown> = {}; if (this.peek()?.type !== 'rbrace') { while (true) { const k = this.next(); const key = k.type === 'string' ? k.value : k.type === 'ident' ? k.value : ''; this.expect('op'); if (this.peek()?.value !== ':') throw new EvalSyntaxError('对象缺少冒号'); this.next(); const v = this.ternary(); obj[key] = v; if (this.peek()?.type === 'comma') { this.next(); continue; } break; } } this.expect('rbrace'); return obj; }
@@ -191,13 +191,25 @@ class Parser {
     return fn(args, this.ctx);
   }
 
-  // 从上下文取值：ident 为 $json/json/env/+ 或裸字段名
+  // 从上下文取值：ident 为 $json/json/env/+ 或裸字段名（支持点链访问 json.a.b）
   private lookup(name: string): unknown {
     if (name === 'json' || name === '$json') return this.ctx.json;
     if (name === 'env') return this.ctx.env;
     if (name === '$now') return this.ctx.$now ?? new Date().toISOString();
     // 裸字段名 → 从当前 json 项取
     return getNested(this.ctx.json, name.split('.'));
+  }
+
+  // 支持属性链的 primary：$json.args.x / json.a.b / env.k / 裸字段 x.y.z / 任意值.field
+  private primaryIdent(name: string): unknown {
+    let base: unknown = this.lookup(name);
+    while (this.peek()?.type === 'dot') {
+      this.next();
+      const prop = this.next();
+      if (prop.type !== 'ident') throw new EvalSyntaxError('点号后需为字段名');
+      base = base == null || typeof base !== 'object' ? undefined : (base as Record<string, unknown>)[prop.value];
+    }
+    return base;
   }
 }
 
