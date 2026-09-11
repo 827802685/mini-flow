@@ -113,6 +113,12 @@ restApi
   .get('/community-nodes', (c) => c.json({ data: [] }))
   // tags：工作流标签
   .get('/tags', (c) => c.json({ data: [] }))
+  // 节点翻译头：defaultLocale 非 en 时路由守卫调用 getNodeTranslationHeaders
+  // （GET /rest/node-translation-headers）。本精简版无节点翻译，返回空映射即可，
+  // 缺失时前端 localizeNodeName 回退英文节点名。
+  .get('/node-translation-headers', (c) => c.json({ data: {} }))
+  // 凭据翻译：defaultLocale 非 en 时凭据面板按类型请求翻译。返回 null 表示无翻译。
+  .get('/credential-translation', (c) => c.json({ data: null }))
   // 动态端点：角色/项目等信息由上面提供
   // 仪表盘展示激活状态：GET /rest/active-workflows
   .get('/active-workflows', async (c) => {
