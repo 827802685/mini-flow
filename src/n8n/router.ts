@@ -32,8 +32,11 @@ export const restApi = new Hono<{ Bindings: Env }>({ strict: false })
 const OPEN_PATHS = new Set<string>(['/login', '/owner/setup', '/meta']);
 restApi.use('*', async (c, next) => {
   if (c.req.method === 'OPTIONS') return next();
-  const path = new URL(c.req.url).pathname.replace(/\/+$/, '');
-  if (OPEN_PATHS.has(path)) return next();
+  // restApi 挂载在 /rest 下；c.req.url 是完整 URL(含 /rest)，而白名单按 n8n 契约(无前缀)。
+  // Hono 子应用内 c.req.path 通常已相对 /rest，这里双保险：剥掉可选的 /rest 前缀再匹配。
+  const full = new URL(c.req.url).pathname.replace(/\/+$/, '');
+  const rel = full === '/rest' || full.startsWith('/rest/') ? (full.slice(5) || '/') : full;
+  if (OPEN_PATHS.has(rel)) return next();
   if (!(await isAuthed(c))) return c.json({ code: 401, message: 'Unauthorized', data: undefined }, 401);
   await next();
 });
