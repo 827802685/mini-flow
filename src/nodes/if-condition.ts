@@ -76,9 +76,11 @@ export const ifNode = {
       result = compare(interpKeepType(p.value, item), p.operator ?? 'equals', ((x: any) => x)(p.conditionValue));
     }
 
+    // 引擎分支路由(branchOutputs)只登记带 items 的分支：branch=true→main[0]，branch=false→main[1]。
+    // 故 false 分支必须同样携带输入项，否则下游 false 分支节点因无活跃入边而被跳过(不执行)。
     return result
       ? { main: [{ json: item }], branch: true }
-      : { main: [], branch: false };
+      : { main: [{ json: item }], branch: false };
   },
 };
 
