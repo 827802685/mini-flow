@@ -24,7 +24,7 @@ interface Token {
   value: string;
 }
 
-const SYMBOLS = new Set(['==', '!=', '>=', '<=', '&&', '||', '>', '<', '+', '-', '*', '/', '!', '?', ':']);
+const SYMBOLS = new Set(['===', '!==', '==', '!=', '>=', '<=', '&&', '||', '>', '<', '+', '-', '*', '/', '!', '?', ':']);
 const SINGLE = new Set(['(', ')', ',', '{', '}', '[', ']', '.']);
 
 function tokenize(src: string): Token[] {
@@ -56,6 +56,8 @@ function tokenize(src: string): Token[] {
       tokens.push({ type: 'ident', value: src.slice(i, j) });
       i = j; continue;
     }
+    const three = src.slice(i, i + 3);
+    if (SYMBOLS.has(three)) { tokens.push({ type: 'op', value: three }); i += 3; continue; }
     const two = src.slice(i, i + 2);
     if (SYMBOLS.has(two)) { tokens.push({ type: 'op', value: two }); i += 2; continue; }
     if (SYMBOLS.has(ch)) { tokens.push({ type: 'op', value: ch }); i++; continue; }
@@ -118,10 +120,11 @@ class Parser {
   }
   private equality(): unknown {
     let l = this.comparison();
-    while (this.isOp('==', '!=')) {
+    while (this.isOp('==', '!=', '===', '!==')) {
       const op = this.next().value;
       const r = this.comparison();
-      l = op === '==' ? looseEq(l, r) : !looseEq(l, r);
+      // === / !== 视作与 == / != 相同的宽松等价（数字与数字字符串互通）
+      l = op === '===' || op === '==' ? looseEq(l, r) : !looseEq(l, r);
     }
     return l;
   }

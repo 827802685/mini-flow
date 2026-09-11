@@ -57,6 +57,13 @@ export const ifNode = {
         const right = interpKeepType(c.rightValue, item);
         if (compare(left, c.operator, right)) { result = true; break; }
       }
+    } else if (typeof p.conditionSt === 'string') {
+      // n8n 新版 IF 参数：单布尔表达式（可能带 {{ }} 包裹）
+      let expr = p.conditionSt.trim();
+      const em = expr.match(/^{\{\s*([\s\S]*?)\s*\}\}$/);
+      if (em) expr = em[1].trim();
+      const ev = safeEvaluate(expr, { json: item });
+      result = ev.ok ? Boolean(ev.value) : false;
     } else if (typeof p.expression === 'string') {
       const ev = safeEvaluate(p.expression, { json: item });
       result = ev.ok ? Boolean(ev.value) : false;
