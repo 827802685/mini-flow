@@ -169,9 +169,9 @@ class Parser {
       case 'ident':
         if (this.peek()?.type === 'lparen') return this.call(t.value);
         return this.primaryIdent(t.value);
-      case 'lparen': { const v = this.ternary(); this.expect('rparen'); return v; }
-      case 'lbracket': { const arr: unknown[] = []; if (this.peek()?.type !== 'rbracket') { arr.push(this.ternary()); while (this.peek()?.type === 'comma') { this.next(); arr.push(this.ternary()); } } this.expect('rbracket'); return arr; }
-      case 'lbrace': { const obj: Record<string, unknown> = {}; if (this.peek()?.type !== 'rbrace') { while (true) { const k = this.next(); const key = k.type === 'string' ? k.value : k.type === 'ident' ? k.value : ''; this.expect('op'); if (this.peek()?.value !== ':') throw new EvalSyntaxError('对象缺少冒号'); this.next(); const v = this.ternary(); obj[key] = v; if (this.peek()?.type === 'comma') { this.next(); continue; } break; } } this.expect('rbrace'); return obj; }
+      case 'lparen': { const v = this.ternary(); this.expect('rparen'); return this.chain(v); }
+      case 'lbracket': { const arr: unknown[] = []; if (this.peek()?.type !== 'rbracket') { arr.push(this.ternary()); while (this.peek()?.type === 'comma') { this.next(); arr.push(this.ternary()); } } this.expect('rbracket'); return this.chain(arr); }
+      case 'lbrace': { const obj: Record<string, unknown> = {}; if (this.peek()?.type !== 'rbrace') { while (true) { const k = this.next(); const key = k.type === 'string' ? k.value : k.type === 'ident' ? k.value : ''; const colon = this.next(); if (colon.type !== 'op' || colon.value !== ':') throw new EvalSyntaxError('对象缺少冒号'); const v = this.ternary(); obj[key] = v; if (this.peek()?.type === 'comma') { this.next(); continue; } break; } } this.expect('rbrace'); return obj; }
       case 'dot': { const prop = this.next(); if (prop.type !== 'ident') throw new EvalSyntaxError('点号后需为字段名'); return getPath(this.ctx, [prop.value]); }
       default: throw new EvalSyntaxError(`意外的 token: ${t.value}`);
     }
@@ -201,14 +201,19 @@ class Parser {
 
   // 支持属性链的 primary：$json.args.x / json.a.b / env.k / 裸字段 x.y.z / 任意值.field
   private primaryIdent(name: string): unknown {
-    let base: unknown = this.lookup(name);
+    return this.chain(this.lookup(name));
+  }
+
+  // 链式成员访问：x.a.b / (expr).field / [arr].length 等，点号后需为字段名
+  private chain(base: unknown): unknown {
+    let val = base;
     while (this.peek()?.type === 'dot') {
       this.next();
       const prop = this.next();
       if (prop.type !== 'ident') throw new EvalSyntaxError('点号后需为字段名');
-      base = base == null || typeof base !== 'object' ? undefined : (base as Record<string, unknown>)[prop.value];
+      val = val == null || typeof val !== 'object' ? undefined : (val as Record<string, unknown>)[prop.value];
     }
-    return base;
+    return val;
   }
 }
 
